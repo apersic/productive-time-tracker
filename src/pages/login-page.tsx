@@ -12,7 +12,14 @@ import { useState, type SubmitEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { parseAccessToken, parseOrganizationId } from "../lib/auth/session.ts";
 import { useAuth } from "../lib/auth/use-auth.ts";
+import {
+  FieldWarning,
+  fieldIssueMessage,
+  presenceIssue,
+  type FieldIssue,
+} from "../lib/forms";
 import { EyeIcon, EyeOffIcon } from "../lib/icons";
+import { Card } from "../lib/ui";
 
 export function LoginPage() {
   const { session, login } = useAuth();
@@ -20,6 +27,12 @@ export function LoginPage() {
   const [organizationId, setOrganizationId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [accessTokenVisible, setAccessTokenVisible] = useState(false);
+  const [organizationIssue, setOrganizationIssue] = useState<
+    FieldIssue | undefined
+  >(undefined);
+  const [tokenIssue, setTokenIssue] = useState<FieldIssue | undefined>(
+    undefined,
+  );
   const [error, setError] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
 
@@ -43,6 +56,13 @@ export function LoginPage() {
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting) {
+      return;
+    }
+    const nextOrganizationIssue = presenceIssue(organizationId);
+    const nextTokenIssue = presenceIssue(accessToken);
+    setOrganizationIssue(nextOrganizationIssue);
+    setTokenIssue(nextTokenIssue);
+    if (nextOrganizationIssue || nextTokenIssue) {
       return;
     }
     const parsedOrganizationId = parseOrganizationId(organizationId);
@@ -69,66 +89,89 @@ export function LoginPage() {
   }
 
   return (
-    <Stack
-      gap="6"
-      maxW="md"
-      w="full"
-      css={{
-        backgroundColor: "#fdfdfd",
-        border: "1px solid #e7e7e7",
-        padding: "24px",
-        borderRadius: "12px",
-      }}
-    >
-      <Heading as="h1" size="lg">
-        Log in
-      </Heading>
-      <Text>Enter your Productive API token and organization ID.</Text>
-      <form onSubmit={(event) => void onSubmit(event)}>
-        <Stack gap="4">
-          <Field.Root required>
-            <Field.Label>Organization ID</Field.Label>
-            <Input
-              name="organizationId"
-              value={organizationId}
-              onChange={(event) => setOrganizationId(event.target.value)}
-              autoComplete="off"
-            />
-          </Field.Root>
-          <Field.Root required>
-            <Field.Label>API token</Field.Label>
-            <InputGroup
-              endElement={
-                <IconButton
-                  type="button"
-                  variant="ghost"
-                  size="xs"
-                  aria-label={accessTokenVisible ? "Hide token" : "Show token"}
-                  onClick={() => setAccessTokenVisible((visible) => !visible)}
-                >
-                  {accessTokenVisible ? <EyeOffIcon /> : <EyeIcon />}
-                </IconButton>
-              }
-            >
-              <Input
-                name="accessToken"
-                type={accessTokenVisible ? "text" : "password"}
-                value={accessToken}
-                onChange={(event) => setAccessToken(event.target.value)}
-                autoComplete="off"
-              />
-            </InputGroup>
-          </Field.Root>
-          {(error ?? restoreError) ? (
-            <Text color="fg.error" role="alert">
-              {error ?? restoreError}
-            </Text>
-          ) : null}
-          <Button type="submit" loading={submitting}>
-            Log in
-          </Button>
-        </Stack>
-      </form>
-    </Stack>
+    <Card maxW="md" w="full">
+      <Stack gap="6">
+        <Heading as="h1" size="lg">
+          Log in
+        </Heading>
+        <Text>Enter your Productive API token and organization ID.</Text>
+        <form noValidate onSubmit={(event) => void onSubmit(event)}>
+          <Stack gap="4">
+            <Field.Root required invalid={organizationIssue !== undefined}>
+              <Field.Label>Organization ID</Field.Label>
+              <InputGroup
+                endElement={
+                  organizationIssue ? (
+                    <FieldWarning
+                      message={fieldIssueMessage(organizationIssue)}
+                    />
+                  ) : undefined
+                }
+              >
+                <Input
+                  name="organizationId"
+                  value={organizationId}
+                  onChange={(event) => {
+                    setOrganizationId(event.target.value);
+                    setOrganizationIssue(undefined);
+                  }}
+                  onBlur={() => {
+                    setOrganizationIssue(presenceIssue(organizationId));
+                  }}
+                  autoComplete="off"
+                />
+              </InputGroup>
+            </Field.Root>
+            <Field.Root required invalid={tokenIssue !== undefined}>
+              <Field.Label>API token</Field.Label>
+              <InputGroup
+                endElement={
+                  <>
+                    {tokenIssue ? (
+                      <FieldWarning message={fieldIssueMessage(tokenIssue)} />
+                    ) : null}
+                    <IconButton
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      aria-label={
+                        accessTokenVisible ? "Hide token" : "Show token"
+                      }
+                      onClick={() =>
+                        setAccessTokenVisible((visible) => !visible)
+                      }
+                    >
+                      {accessTokenVisible ? <EyeOffIcon /> : <EyeIcon />}
+                    </IconButton>
+                  </>
+                }
+              >
+                <Input
+                  name="accessToken"
+                  type={accessTokenVisible ? "text" : "password"}
+                  value={accessToken}
+                  onChange={(event) => {
+                    setAccessToken(event.target.value);
+                    setTokenIssue(undefined);
+                  }}
+                  onBlur={() => {
+                    setTokenIssue(presenceIssue(accessToken));
+                  }}
+                  autoComplete="off"
+                />
+              </InputGroup>
+            </Field.Root>
+            {(error ?? restoreError) ? (
+              <Text color="fg.error" role="alert">
+                {error ?? restoreError}
+              </Text>
+            ) : null}
+            <Button type="submit" loading={submitting}>
+              Log in
+            </Button>
+          </Stack>
+        </form>
+      </Stack>
+    </Card>
   );
 }
