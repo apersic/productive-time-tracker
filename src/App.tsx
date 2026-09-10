@@ -5,14 +5,19 @@ import { LoginPage } from "./pages/login-page.tsx";
 
 export default function App() {
   return (
-    <Flex minH="100vh" align="center" justify="center" px="4">
-      <Box w="full" maxW="lg">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Box>
-    </Flex>
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <Flex minH="100vh" align="center" justify="center" px="4">
+            <Box w="full" maxW="lg">
+              <LoginPage />
+            </Box>
+          </Flex>
+        }
+      />
+      <Route path="/" element={<HomePage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
