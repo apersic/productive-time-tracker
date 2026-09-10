@@ -1,6 +1,13 @@
 import type { AuthError } from "../auth/session.ts";
 import { isRecord } from "../helpers/is-record.ts";
 
+export type JsonApiResource = {
+  id: string;
+  type: string;
+  attributes: Record<string, unknown>;
+  relationships?: unknown;
+};
+
 export function readStringAttribute(
   attributes: Record<string, unknown>,
   key: string,
@@ -9,11 +16,32 @@ export function readStringAttribute(
   return typeof value === "string" ? value : "";
 }
 
+export function readNumberAttribute(
+  attributes: Record<string, unknown>,
+  key: string,
+): number | undefined {
+  const value = attributes[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return undefined;
+  }
+  return value;
+}
+
+export function readTimestampMs(
+  attributes: Record<string, unknown>,
+  key: string,
+): number | undefined {
+  const value = attributes[key];
+  if (typeof value !== "string" || value.length === 0) {
+    return undefined;
+  }
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : undefined;
+}
+
 export function parseJsonApiResource(
   value: unknown,
-):
-  | { id: string; type: string; attributes: Record<string, unknown> }
-  | undefined {
+): JsonApiResource | undefined {
   if (!isRecord(value)) {
     return undefined;
   }
@@ -21,6 +49,14 @@ export function parseJsonApiResource(
     return undefined;
   }
   const attributes = isRecord(value.attributes) ? value.attributes : {};
+  if ("relationships" in value) {
+    return {
+      id: value.id,
+      type: value.type,
+      attributes,
+      relationships: value.relationships,
+    };
+  }
   return { id: value.id, type: value.type, attributes };
 }
 
@@ -37,18 +73,55 @@ export function parseJsonApiDataList(value: unknown): unknown[] | undefined {
   return [value.data];
 }
 
+export function parseJsonApiLinks(json: unknown): { next: string | undefined } {
+  if (!isRecord(json) || !isRecord(json.links)) {
+    return { next: undefined };
+  }
+  const next = json.links.next;
+  if (typeof next !== "string" || next.length === 0) {
+    return { next: undefined };
+  }
+  return { next };
+}
+
+export function parseJsonApiIncluded(
+  json: unknown,
+): Map<string, JsonApiResource> {
+  const included = new Map<string, JsonApiResource>();
+  if (!isRecord(json) || !Array.isArray(json.included)) {
+    return included;
+  }
+  for (const item of json.included) {
+    const resource = parseJsonApiResource(item);
+    if (!resource) {
+      continue;
+    }
+    included.set(`${resource.type}:${resource.id}`, resource);
+  }
+  return included;
+}
+
+export function parseRelationshipId(
+  resource: { relationships?: unknown },
+  name: string,
+): string | undefined {
+  if (!isRecord(resource.relationships)) {
+    return undefined;
+  }
+  const relationship = resource.relationships[name];
+  if (!isRecord(relationship) || !isRecord(relationship.data)) {
+    return undefined;
+  }
+  return typeof relationship.data.id === "string"
+    ? relationship.data.id
+    : undefined;
+}
+
 export function uniqueJsonApiResource(
   json: unknown,
   type: string,
 ):
-  | {
-      ok: true;
-      resource: {
-        id: string;
-        type: string;
-        attributes: Record<string, unknown>;
-      };
-    }
+  | { ok: true; resource: JsonApiResource }
   | { ok: false; reason: "missing" | "many" } {
   const list = parseJsonApiDataList(json);
   if (list === undefined || list.length === 0) {
@@ -64,21 +137,34 @@ export function uniqueJsonApiResource(
   return { ok: true, resource };
 }
 
-export async function productiveGet(args: {
+export function productiveRequestUrl(baseUrl: string, path: string): string {
+  if (path.startsWith("https://") || path.startsWith("http://")) {
+    return path;
+  }
+  return `${baseUrl.replace(/\/$/, "")}${path}`;
+}
+
+export async function productiveRequest(args: {
   baseUrl: string;
   path: string;
+  method: "GET" | "POST" | "PATCH" | "DELETE";
   organizationId: string;
   accessToken: string;
-}): Promise<{ ok: true; json: unknown } | { ok: false; error: AuthError }> {
-  const url = `${args.baseUrl.replace(/\/$/, "")}${args.path}`;
+  body?: unknown;
+}): Promise<
+  { ok: true; json: unknown } | { ok: false; error: AuthError; status?: number }
+> {
+  const url = productiveRequestUrl(args.baseUrl, args.path);
   let response: Response;
   try {
     response = await fetch(url, {
+      method: args.method,
       headers: {
         "Content-Type": "application/vnd.api+json",
         "X-Auth-Token": args.accessToken,
         "X-Organization-Id": args.organizationId,
       },
+      ...(args.body !== undefined ? { body: JSON.stringify(args.body) } : {}),
     });
   } catch {
     return {
@@ -94,12 +180,25 @@ export async function productiveGet(args: {
         kind: "unauthorized",
         message: "Invalid token or organization ID.",
       },
+      status: response.status,
+    };
+  }
+
+  const text = await response.text();
+  if (response.status === 204 || text.length === 0) {
+    if (response.ok) {
+      return { ok: true, json: null };
+    }
+    return {
+      ok: false,
+      error: { kind: "invalid", message: "Productive rejected the request." },
+      status: response.status,
     };
   }
 
   let json: unknown;
   try {
-    json = await response.json();
+    json = JSON.parse(text);
   } catch {
     return {
       ok: false,
@@ -114,8 +213,20 @@ export async function productiveGet(args: {
     return {
       ok: false,
       error: { kind: "invalid", message: "Productive rejected the request." },
+      status: response.status,
     };
   }
 
   return { ok: true, json };
+}
+
+export async function productiveGet(args: {
+  baseUrl: string;
+  path: string;
+  organizationId: string;
+  accessToken: string;
+}): Promise<
+  { ok: true; json: unknown } | { ok: false; error: AuthError; status?: number }
+> {
+  return productiveRequest({ ...args, method: "GET" });
 }
