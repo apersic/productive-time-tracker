@@ -1,6 +1,6 @@
 # NAME
 
-[TS-XX] - Title
+[PTT-XX] - Title
 
 ## Description
 
@@ -19,4 +19,4 @@ Post screenshots, videos, or gifs if a UI is affected or added.
 
 ## Ticket number and link
 
-[TS-XX](url)
+[PTT-XX](url)
