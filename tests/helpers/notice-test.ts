@@ -182,6 +182,39 @@ QUnit.test("sessionExpired maps to sessionExpired", (assert) => {
   });
 });
 
+QUnit.test("delete ok maps to entryDeleted", (assert) => {
+  assert.deepEqual(
+    noticeFromWrite({ op: "deleteEntry", result: { ok: true } }),
+    { kind: "entryDeleted" },
+  );
+});
+
+QUnit.test("delete fail network maps to entryDeleteFailed", (assert) => {
+  assert.deepEqual(
+    noticeFromWrite({
+      op: "deleteEntry",
+      result: {
+        ok: false,
+        error: error("network", "Could not reach Productive."),
+      },
+    }),
+    {
+      kind: "entryDeleteFailed",
+      message: "Could not reach Productive.",
+    },
+  );
+});
+
+QUnit.test("delete fail unauthorized is a no-op", (assert) => {
+  assert.strictEqual(
+    noticeFromWrite({
+      op: "deleteEntry",
+      result: { ok: false, error: error("unauthorized") },
+    }),
+    undefined,
+  );
+});
+
 QUnit.module("copyForNotice");
 
 QUnit.test("entryCreated title is Time entry added", (assert) => {
@@ -242,4 +275,25 @@ QUnit.test("sessionExpired title is the fixed session copy", (assert) => {
     level: "title",
     title: "Your session expired. Log in again.",
   });
+});
+
+QUnit.test("entryDeleted title is Time entry deleted", (assert) => {
+  assert.deepEqual(copyForNotice({ kind: "entryDeleted" }), {
+    level: "title",
+    title: "Time entry deleted",
+  });
+});
+
+QUnit.test("entryDeleteFailed uses the error message", (assert) => {
+  assert.deepEqual(
+    copyForNotice({
+      kind: "entryDeleteFailed",
+      message: "Could not reach Productive.",
+    }),
+    {
+      level: "detail",
+      title: "Couldn't delete the time entry",
+      description: "Could not reach Productive.",
+    },
+  );
 });

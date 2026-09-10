@@ -12,6 +12,7 @@ import {
   mockProductiveIdentity,
   mockServices,
   mockTimeEntries,
+  mockTimeEntryDelete,
   mockTimers,
   openHome,
   seedStoredCredentials,
@@ -164,4 +165,207 @@ test("restore clears credentials on 401", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
   expect(await storedCredentials(page)).toBeNull();
+});
+
+async function openEntryDeleteConfirm(page: Page, entryId = "entry-1") {
+  await page
+    .locator(`[data-entry-id="${entryId}"]`)
+    .getByRole("button", { name: "More" })
+    .click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+}
+
+test("More Edit is a no-op and Cancel leaves the row", async ({ page }) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+  }));
+  await mockTimeEntryDelete(page);
+  await openHome(page);
+  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Development" }),
+  ).toBeVisible();
+  await openEntryDeleteConfirm(page);
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Development" }),
+  ).toBeVisible();
+});
+
+test("Confirm deletes the row and shows a success toast", async ({ page }) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+  }));
+  await mockTimeEntryDelete(page);
+  await openHome(page);
+  await openEntryDeleteConfirm(page);
+  await page.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText("Time entry deleted")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Development" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByText(/There's no tracked time for/)).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Copy tasks from previous day" }),
+  ).toHaveCount(0);
+});
+
+function parseRgb(value: string) {
+  const match = value.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/);
+  if (
+    !match ||
+    match[1] === undefined ||
+    match[2] === undefined ||
+    match[3] === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    r: Number(match[1]),
+    g: Number(match[2]),
+    b: Number(match[3]),
+  };
+}
+
+test("a 500 delete keeps the row and shows an error toast", async ({
+  page,
+}) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+  }));
+  await mockTimeEntryDelete(page, () => ({ status: 500 }));
+  await openHome(page);
+  await openEntryDeleteConfirm(page);
+  await page.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText("Couldn't delete the time entry")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Development" }),
+  ).toBeVisible();
+});
+
+test("a 403 delete keeps the session and the row", async ({ page }) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+  }));
+  await mockTimeEntryDelete(page, () => ({ status: 403 }));
+  await openHome(page);
+  await openEntryDeleteConfirm(page);
+  await page.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText("Couldn't delete the time entry")).toBeVisible();
+  await expect(
+    page.getByText("This time entry can't be deleted."),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Development" }),
+  ).toBeVisible();
+  expect(await storedCredentials(page)).not.toBeNull();
+});
+
+test("a 404 delete still removes the row", async ({ page }) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+  }));
+  await mockTimeEntryDelete(page, () => ({ status: 404 }));
+  await openHome(page);
+  await openEntryDeleteConfirm(page);
+  await page.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText("Time entry deleted")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Development" })).toHaveCount(
+    0,
+  );
+});
+
+test("deleting a running entry idles the timer", async ({ page }) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+  }));
+  await mockTimeEntryDelete(page);
+  await openHome(page);
+  await page.getByRole("button", { name: "Play" }).click();
+  await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+  await openEntryDeleteConfirm(page);
+  await page.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText("Time entry deleted")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pause" })).toHaveCount(0);
+});
+
+test("deleting the last loaded row with more pages refills page 1", async ({
+  page,
+}) => {
+  let deleted = false;
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => {
+    if (deleted) {
+      return {
+        data: [jsonApiTimeEntry("entry-2")],
+        included: [jsonApiService()],
+      };
+    }
+    return {
+      data: [jsonApiTimeEntry()],
+      included: [jsonApiService()],
+      links: {
+        next: "https://api.productive.io/api/v2/time_entries?page=2",
+      },
+    };
+  });
+  await mockTimeEntryDelete(page, () => {
+    deleted = true;
+    return { status: 204 };
+  });
+  await page.route("**/api/v2/time_entries**", async (route) => {
+    if (route.request().method() === "DELETE") {
+      await route.fallback();
+      return;
+    }
+    const pageParam = new URL(route.request().url()).searchParams.get("page");
+    if (pageParam !== "2") {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 500,
+      contentType: "application/vnd.api+json",
+      body: "{}",
+    });
+  });
+  await openHome(page);
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page.locator('[data-entry-id="entry-1"]')).toHaveCount(1);
+  await openEntryDeleteConfirm(page);
+  await page.getByRole("button", { name: "Confirm" }).click();
+  await expect(page.getByText("Time entry deleted")).toBeVisible();
+  await expect(page.locator('[data-entry-id="entry-1"]')).toHaveCount(0);
+  await expect(page.locator('[data-entry-id="entry-2"]')).toBeVisible();
 });

@@ -9,6 +9,7 @@ import {
   type RunningTimer,
   type ServiceId,
   type TimeEntry,
+  type TimeEntryId,
   type TimesheetError,
 } from "../timesheet/day-timesheet.ts";
 import {
@@ -258,4 +259,31 @@ export async function createTimeEntry(args: {
     };
   }
   return { ok: true, entry: parsed.entry };
+}
+
+export async function deleteTimeEntry(args: {
+  credentials: Credentials;
+  entryId: TimeEntryId;
+}): Promise<{ ok: true } | { ok: false; error: TimesheetError }> {
+  const result = await productiveRequest({
+    ...credentialsArgs(args.credentials),
+    path: `/time_entries/${encodeURIComponent(args.entryId)}`,
+    method: "DELETE",
+  });
+  if (result.ok) {
+    return { ok: true };
+  }
+  if (result.status === 404) {
+    return { ok: true };
+  }
+  if (result.status === 403) {
+    return {
+      ok: false,
+      error: {
+        kind: "rejected",
+        message: "This time entry can't be deleted.",
+      },
+    };
+  }
+  return result;
 }

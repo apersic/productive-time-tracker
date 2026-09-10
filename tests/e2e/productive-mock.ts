@@ -46,9 +46,9 @@ export function localYmd(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function jsonApiTimeEntry() {
+export function jsonApiTimeEntry(id = "entry-1") {
   return {
-    id: "entry-1",
+    id,
     type: "time_entries",
     attributes: {
       note: "<ul><li><p>Wrote tests</p></li></ul>",
@@ -225,6 +225,34 @@ export async function mockTimeEntries(
     await route.fulfill({
       ...jsonApiHeaders(),
       body: JSON.stringify(handler(route.request().url())),
+    });
+  });
+}
+
+function timeEntryIdFromDeleteUrl(url: string): string | undefined {
+  try {
+    const match = new URL(url).pathname.match(/\/time_entries\/([^/]+)$/);
+    return match?.[1];
+  } catch {
+    return undefined;
+  }
+}
+
+export async function mockTimeEntryDelete(
+  page: Page,
+  handler?: (id: string) => { status: number },
+) {
+  await page.route("**/api/v2/time_entries/**", async (route) => {
+    if (route.request().method() !== "DELETE") {
+      await route.fallback();
+      return;
+    }
+    const id = timeEntryIdFromDeleteUrl(route.request().url()) ?? "entry-1";
+    const result = handler?.(id) ?? { status: 204 };
+    await route.fulfill({
+      status: result.status,
+      contentType: "application/vnd.api+json",
+      body: result.status === 204 ? "" : "{}",
     });
   });
 }

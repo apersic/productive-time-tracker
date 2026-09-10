@@ -21,11 +21,13 @@ function typeForNotice(notice: Notice): "success" | "warning" | "error" {
   switch (notice.kind) {
     case "entryCreated":
     case "dayCopied":
+    case "entryDeleted":
       return "success";
     case "dayCopiedPartial":
       return "warning";
     case "timerFailed":
     case "recoverTimerFailed":
+    case "entryDeleteFailed":
     case "sessionExpired":
       return "error";
     default: {
@@ -39,10 +41,12 @@ function durationForNotice(notice: Notice): number {
   switch (notice.kind) {
     case "entryCreated":
     case "dayCopied":
+    case "entryDeleted":
       return 4000;
     case "dayCopiedPartial":
     case "timerFailed":
     case "recoverTimerFailed":
+    case "entryDeleteFailed":
     case "sessionExpired":
       return 8000;
     default: {
@@ -61,6 +65,8 @@ function toastIdForNotice(notice: Notice): string | undefined {
     case "dayCopiedPartial":
     case "timerFailed":
     case "recoverTimerFailed":
+    case "entryDeleted":
+    case "entryDeleteFailed":
       return undefined;
     default: {
       const _exhaustive: never = notice;

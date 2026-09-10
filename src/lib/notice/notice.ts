@@ -9,6 +9,7 @@ export type Write =
   | { op: "copyDay"; result: CopyDayResult }
   | { op: "timer"; result: WriteResult }
   | { op: "recoverTimer"; result: WriteResult }
+  | { op: "deleteEntry"; result: WriteResult }
   | { op: "sessionExpired" };
 
 export type WriteResult = { ok: true } | { ok: false; error: TimesheetError };
@@ -24,6 +25,8 @@ export type Notice =
   | { kind: "dayCopiedPartial"; from: CalendarDay; created: number }
   | { kind: "timerFailed"; message: string }
   | { kind: "recoverTimerFailed"; message: string }
+  | { kind: "entryDeleted" }
+  | { kind: "entryDeleteFailed"; message: string }
   | { kind: "sessionExpired" };
 
 export type NoticeCopy =
@@ -88,6 +91,18 @@ export function noticeFromWrite(write: Write): Notice | undefined {
         message: write.result.error.message,
       };
     }
+    case "deleteEntry": {
+      if (write.result.ok) {
+        return { kind: "entryDeleted" };
+      }
+      if (write.result.error.kind === "unauthorized") {
+        return undefined;
+      }
+      return {
+        kind: "entryDeleteFailed",
+        message: write.result.error.message,
+      };
+    }
     case "sessionExpired":
       return { kind: "sessionExpired" };
     default: {
@@ -122,6 +137,14 @@ export function copyForNotice(notice: Notice): NoticeCopy {
       return {
         level: "detail",
         title: "Couldn't refresh the timer",
+        description: notice.message,
+      };
+    case "entryDeleted":
+      return { level: "title", title: "Time entry deleted" };
+    case "entryDeleteFailed":
+      return {
+        level: "detail",
+        title: "Couldn't delete the time entry",
         description: notice.message,
       };
     case "sessionExpired":

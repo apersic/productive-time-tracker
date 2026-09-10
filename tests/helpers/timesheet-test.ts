@@ -1,5 +1,10 @@
 import QUnit from "qunit";
+import {
+  parseAccessToken,
+  parseOrganizationId,
+} from "../../src/lib/auth/session";
 import { productiveRequestUrl } from "../../src/lib/productive/json-api";
+import { deleteTimeEntry } from "../../src/lib/productive/time-entries";
 import {
   alreadyCopied,
   applyFact,
@@ -205,6 +210,149 @@ QUnit.test("play on an already running id is a noop", (assert) => {
   });
   assert.strictEqual(next, state);
   assert.deepEqual(next.timer, { kind: "running", timer });
+});
+
+QUnit.test("entryRemoved drops a row and keeps the page cursor", (assert) => {
+  const tenth = day("2026-09-10");
+  const first = sampleEntry();
+  const second: TimeEntry = {
+    ...first,
+    id: entryId("e2"),
+    note: noteFromText("Other"),
+  };
+  const state: DayTimesheet = {
+    day: tenth,
+    entries: {
+      status: "ready",
+      rows: [first, second],
+      page: { kind: "more", next: "/time_entries?page=2" },
+    },
+    timer: { kind: "idle" },
+  };
+  const next = applyFact(state, {
+    kind: "entryRemoved",
+    day: tenth,
+    entryId: first.id,
+  });
+  assert.deepEqual(next.entries, {
+    status: "ready",
+    rows: [second],
+    page: { kind: "more", next: "/time_entries?page=2" },
+  });
+  assert.deepEqual(next.timer, { kind: "idle" });
+});
+
+QUnit.test(
+  "entryRemoved on the last complete row becomes empty unavailable",
+  (assert) => {
+    const tenth = day("2026-09-10");
+    const row = sampleEntry();
+    const state: DayTimesheet = {
+      day: tenth,
+      entries: {
+        status: "ready",
+        rows: [row],
+        page: { kind: "complete" },
+      },
+      timer: { kind: "idle" },
+    };
+    const next = applyFact(state, {
+      kind: "entryRemoved",
+      day: tenth,
+      entryId: row.id,
+    });
+    assert.deepEqual(next.entries, {
+      status: "empty",
+      copy: { kind: "unavailable" },
+    });
+  },
+);
+
+QUnit.test(
+  "entryRemoved on the last loaded row with more pages becomes loading and idles the timer",
+  (assert) => {
+    const tenth = day("2026-09-10");
+    const row = sampleEntry();
+    const timer = sampleTimer(1_000);
+    const state: DayTimesheet = {
+      day: tenth,
+      entries: {
+        status: "ready",
+        rows: [row],
+        page: { kind: "more", next: "/time_entries?page=2" },
+      },
+      timer: { kind: "running", timer },
+    };
+    const next = applyFact(state, {
+      kind: "entryRemoved",
+      day: tenth,
+      entryId: row.id,
+    });
+    assert.deepEqual(next.entries, { status: "loading" });
+    assert.deepEqual(next.timer, { kind: "idle" });
+  },
+);
+
+QUnit.test("entryRemoved of a running id idles the timer", (assert) => {
+  const tenth = day("2026-09-10");
+  const first = sampleEntry();
+  const second: TimeEntry = {
+    ...first,
+    id: entryId("e2"),
+  };
+  const timer = sampleTimer(1_000);
+  const state: DayTimesheet = {
+    day: tenth,
+    entries: {
+      status: "ready",
+      rows: [first, second],
+      page: { kind: "complete" },
+    },
+    timer: { kind: "running", timer },
+  };
+  const next = applyFact(state, {
+    kind: "entryRemoved",
+    day: tenth,
+    entryId: first.id,
+  });
+  assert.strictEqual(next.entries.status, "ready");
+  if (next.entries.status !== "ready") {
+    return;
+  }
+  assert.deepEqual(
+    next.entries.rows.map((row) => row.id),
+    [second.id],
+  );
+  assert.deepEqual(next.timer, { kind: "idle" });
+});
+
+QUnit.test("entryRemoved twice is identity", (assert) => {
+  const tenth = day("2026-09-10");
+  const first = sampleEntry();
+  const second: TimeEntry = {
+    ...first,
+    id: entryId("e2"),
+  };
+  const state: DayTimesheet = {
+    day: tenth,
+    entries: {
+      status: "ready",
+      rows: [first, second],
+      page: { kind: "complete" },
+    },
+    timer: { kind: "idle" },
+  };
+  const once = applyFact(state, {
+    kind: "entryRemoved",
+    day: tenth,
+    entryId: first.id,
+  });
+  const twice = applyFact(once, {
+    kind: "entryRemoved",
+    day: tenth,
+    entryId: first.id,
+  });
+  assert.strictEqual(twice, once);
 });
 
 QUnit.test("entryCreated prepends onto a ready list", (assert) => {
@@ -619,4 +767,77 @@ QUnit.test("strong mark serializes to strong", (assert) => {
     serializeEntryNote(entryNoteFromDoc(doc)),
     "<p><strong>Bold</strong></p>",
   );
+});
+
+function sampleCredentials() {
+  const organizationId = parseOrganizationId("61648");
+  const accessToken = parseAccessToken("token-value");
+  if (!organizationId || !accessToken) {
+    throw new Error("invalid credentials");
+  }
+  return { organizationId, accessToken };
+}
+
+QUnit.module("deleteTimeEntry", (hooks) => {
+  const originalFetch = globalThis.fetch;
+  let captured: { url: string; method: string } | undefined;
+
+  hooks.afterEach(() => {
+    globalThis.fetch = originalFetch;
+    captured = undefined;
+  });
+
+  function stubFetch(status: number, body: string | null = "") {
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      captured = { url, method: init?.method ?? "GET" };
+      return new Response(status === 204 ? null : body, {
+        status,
+        headers: { "Content-Type": "application/vnd.api+json" },
+      });
+    }) as typeof fetch;
+  }
+
+  QUnit.test("204 is ok and DELETEs the entry path", async (assert) => {
+    stubFetch(204);
+    const result = await deleteTimeEntry({
+      credentials: sampleCredentials(),
+      entryId: entryId("e1"),
+    });
+    assert.deepEqual(result, { ok: true });
+    assert.strictEqual(captured?.method, "DELETE");
+    assert.ok(captured?.url.endsWith("/time_entries/e1"));
+  });
+
+  QUnit.test("404 is ok", async (assert) => {
+    stubFetch(404);
+    const result = await deleteTimeEntry({
+      credentials: sampleCredentials(),
+      entryId: entryId("e1"),
+    });
+    assert.deepEqual(result, { ok: true });
+  });
+
+  QUnit.test("403 is rejected, not unauthorized", async (assert) => {
+    stubFetch(403);
+    const result = await deleteTimeEntry({
+      credentials: sampleCredentials(),
+      entryId: entryId("e1"),
+    });
+    assert.deepEqual(result, {
+      ok: false,
+      error: {
+        kind: "rejected",
+        message: "This time entry can't be deleted.",
+      },
+    });
+  });
 });

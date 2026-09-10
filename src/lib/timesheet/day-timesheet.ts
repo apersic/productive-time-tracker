@@ -108,6 +108,7 @@ export type TimesheetFact =
       running: readonly RunningTimer[];
     }
   | { kind: "entryCreated"; day: CalendarDay; entry: TimeEntry }
+  | { kind: "entryRemoved"; day: CalendarDay; entryId: TimeEntryId }
   | { kind: "playRequested"; entryId: TimeEntryId }
   | { kind: "stopRequested" }
   | { kind: "timerStarted"; timer: RunningTimer }
@@ -293,6 +294,7 @@ function factDay(fact: TimesheetFact): CalendarDay | undefined {
     case "copyFailed":
     case "dayReloaded":
     case "entryCreated":
+    case "entryRemoved":
     case "timerRecovered":
       return fact.day;
     default: {
@@ -540,6 +542,72 @@ function applyCopyFailed(
   };
 }
 
+function timerAfterRemoved(slot: TimerSlot, entryId: TimeEntryId): TimerSlot {
+  switch (slot.kind) {
+    case "idle":
+      return slot;
+    case "starting":
+    case "failed":
+      return slot.entryId === entryId ? { kind: "idle" } : slot;
+    case "running":
+    case "stopping":
+      return slot.timer.entryId === entryId ? { kind: "idle" } : slot;
+    case "switching":
+      return slot.from.entryId === entryId || slot.to === entryId
+        ? { kind: "idle" }
+        : slot;
+    default: {
+      const _exhaustive: never = slot;
+      return _exhaustive;
+    }
+  }
+}
+
+function applyEntryRemoved(
+  state: DayTimesheet,
+  fact: Extract<TimesheetFact, { kind: "entryRemoved" }>,
+): DayTimesheet {
+  if (state.entries.status !== "ready") {
+    return state;
+  }
+  if (!state.entries.rows.some((row) => row.id === fact.entryId)) {
+    return state;
+  }
+  const rows = state.entries.rows.filter((row) => row.id !== fact.entryId);
+  const timer = timerAfterRemoved(state.timer, fact.entryId);
+  if (rows.length > 0) {
+    return {
+      ...state,
+      timer,
+      entries: {
+        status: "ready",
+        rows,
+        page: state.entries.page,
+      },
+    };
+  }
+  switch (state.entries.page.kind) {
+    case "complete":
+      return {
+        ...state,
+        timer,
+        entries: { status: "empty", copy: { kind: "unavailable" } },
+      };
+    case "more":
+    case "loadingMore":
+    case "moreFailed":
+      return {
+        ...state,
+        timer,
+        entries: { status: "loading" },
+      };
+    default: {
+      const _exhaustive: never = state.entries.page;
+      return _exhaustive;
+    }
+  }
+}
+
 function applyEntryCreated(
   state: DayTimesheet,
   fact: Extract<TimesheetFact, { kind: "entryCreated" }>,
@@ -773,6 +841,8 @@ export function applyFact(
       return applyDayReloaded(state, fact);
     case "entryCreated":
       return applyEntryCreated(state, fact);
+    case "entryRemoved":
+      return applyEntryRemoved(state, fact);
     case "playRequested":
       return applyPlayRequested(state, fact);
     case "stopRequested":
