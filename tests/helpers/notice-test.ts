@@ -215,6 +215,39 @@ QUnit.test("delete fail unauthorized is a no-op", (assert) => {
   );
 });
 
+QUnit.test("update ok maps to entryUpdated", (assert) => {
+  assert.deepEqual(
+    noticeFromWrite({ op: "updateEntry", result: { ok: true } }),
+    { kind: "entryUpdated" },
+  );
+});
+
+QUnit.test("update fail network maps to entryUpdateFailed", (assert) => {
+  assert.deepEqual(
+    noticeFromWrite({
+      op: "updateEntry",
+      result: {
+        ok: false,
+        error: error("network", "Could not reach Productive."),
+      },
+    }),
+    {
+      kind: "entryUpdateFailed",
+      message: "Could not reach Productive.",
+    },
+  );
+});
+
+QUnit.test("update fail unauthorized is a no-op", (assert) => {
+  assert.strictEqual(
+    noticeFromWrite({
+      op: "updateEntry",
+      result: { ok: false, error: error("unauthorized") },
+    }),
+    undefined,
+  );
+});
+
 QUnit.module("copyForNotice");
 
 QUnit.test("entryCreated title is Time entry added", (assert) => {
@@ -294,6 +327,27 @@ QUnit.test("entryDeleteFailed uses the error message", (assert) => {
       level: "detail",
       title: "Couldn't delete the time entry",
       description: "Could not reach Productive.",
+    },
+  );
+});
+
+QUnit.test("entryUpdated title is Time entry updated", (assert) => {
+  assert.deepEqual(copyForNotice({ kind: "entryUpdated" }), {
+    level: "title",
+    title: "Time entry updated",
+  });
+});
+
+QUnit.test("entryUpdateFailed uses the error message", (assert) => {
+  assert.deepEqual(
+    copyForNotice({
+      kind: "entryUpdateFailed",
+      message: "This time entry can't be updated.",
+    }),
+    {
+      level: "detail",
+      title: "Couldn't update the time entry",
+      description: "This time entry can't be updated.",
     },
   );
 });
