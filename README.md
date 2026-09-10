@@ -27,7 +27,6 @@ Do not commit `.env`. Tokens belong in the login form and in the browser's local
 
 Run these from the repo root:
 
-- `npm run assert-spa` fails if `next` is a dependency or the package name is not `productive-time-tracker`.
 - `npm run typecheck` type-checks the app, Vite config, and QUnit tests.
 - `npm run lint` lints with oxlint.
 - `npm run test` runs the QUnit unit tests.
