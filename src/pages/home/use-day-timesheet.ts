@@ -34,6 +34,7 @@ import {
   type CalendarDay,
 } from "../../lib/time/calendar-day.ts";
 import { parseMinutes, type Minutes } from "../../lib/time/duration.ts";
+import { announce } from "../../lib/notice";
 
 const parsedZeroMinutes = parseMinutes(0);
 if (parsedZeroMinutes === undefined) {
@@ -107,6 +108,7 @@ export function useDayTimesheet(args: {
 
   const onError = useCallback((error: TimesheetError): boolean => {
     if (error.kind === "unauthorized") {
+      announce({ op: "sessionExpired" });
       argsRef.current.logout();
       return true;
     }
@@ -202,6 +204,10 @@ export function useDayTimesheet(args: {
 
       if (!recovered.ok) {
         onError(recovered.error);
+        announce({
+          op: "recoverTimer",
+          result: { ok: false, error: recovered.error },
+        });
       } else {
         commit({ kind: "timerRecovered", day, timer: recovered.timer });
       }
@@ -313,9 +319,11 @@ export function useDayTimesheet(args: {
                 return;
               }
               commit({ kind: "timerFailed", entryId, error: result.error });
+              announce({ op: "timer", result });
               return;
             }
             commit({ kind: "timerStarted", timer: result.timer });
+            announce({ op: "timer", result: { ok: true } });
           });
           return;
         }
@@ -335,6 +343,7 @@ export function useDayTimesheet(args: {
                 entryId: from.entryId,
                 error: stopped.error,
               });
+              announce({ op: "timer", result: stopped });
               return;
             }
             commit({
@@ -356,9 +365,11 @@ export function useDayTimesheet(args: {
                 return;
               }
               commit({ kind: "timerFailed", entryId, error: started.error });
+              announce({ op: "timer", result: started });
               return;
             }
             commit({ kind: "timerStarted", timer: started.timer });
+            announce({ op: "timer", result: { ok: true } });
           })();
           return;
         }
@@ -395,6 +406,7 @@ export function useDayTimesheet(args: {
             entryId: timer.entryId,
             error: result.error,
           });
+          announce({ op: "timer", result });
           return;
         }
         if (!result.ok && result.error.kind === "rejected") {
@@ -438,9 +450,17 @@ export function useDayTimesheet(args: {
             }
           } else {
             onError(page.error);
+            announce({
+              op: "recoverTimer",
+              result: { ok: false, error: page.error },
+            });
           }
           if (!recovered.ok) {
             onError(recovered.error);
+            announce({
+              op: "recoverTimer",
+              result: { ok: false, error: recovered.error },
+            });
             return;
           }
           commit({
@@ -448,6 +468,7 @@ export function useDayTimesheet(args: {
             day: timesheetRef.current.day,
             timer: recovered.timer,
           });
+          announce({ op: "timer", result: { ok: true } });
           return;
         }
         commit({
@@ -455,6 +476,7 @@ export function useDayTimesheet(args: {
           entryId: timer.entryId,
           logged: loggedAtStop(current, timer.entryId, Date.now()),
         });
+        announce({ op: "timer", result: { ok: true } });
       },
     );
   }, [commit, onError]);
@@ -488,18 +510,19 @@ export function useDayTimesheet(args: {
       });
       if (!result.ok) {
         onError(result.error);
+        announce({ op: "createEntry", result });
         return result;
       }
       if (timesheetRef.current.day !== day) {
-        return {
-          ok: false,
-          error: {
-            kind: "rejected",
-            message: "The day changed while this entry was saving.",
-          },
+        const error: TimesheetError = {
+          kind: "rejected",
+          message: "The day changed while this entry was saving.",
         };
+        announce({ op: "createEntry", result: { ok: false, error } });
+        return { ok: false, error };
       }
       commit({ kind: "entryCreated", day, entry: result.entry });
+      announce({ op: "createEntry", result: { ok: true } });
       return { ok: true };
     },
     [commit, onError],
@@ -535,6 +558,10 @@ export function useDayTimesheet(args: {
           return;
         }
         commit({ kind: "copyFailed", day, from, error: source.error });
+        announce({
+          op: "copyDay",
+          result: { ok: false, error: source.error },
+        });
         return;
       }
       const existingResult = await fetchAllTimeEntries({
@@ -547,14 +574,19 @@ export function useDayTimesheet(args: {
           return;
         }
         commit({ kind: "copyFailed", day, from, error: existingResult.error });
+        announce({
+          op: "copyDay",
+          result: { ok: false, error: existingResult.error },
+        });
         return;
       }
       let existing = existingResult.rows;
+      let created = 0;
       for (const row of source.rows) {
         if (alreadyCopied({ source: row, existing })) {
           continue;
         }
-        const created = await createTimeEntry({
+        const posted = await createTimeEntry({
           credentials,
           personId: person.id,
           day,
@@ -563,8 +595,8 @@ export function useDayTimesheet(args: {
           service: row.service,
           task: row.task,
         });
-        if (!created.ok) {
-          if (onError(created.error)) {
+        if (!posted.ok) {
+          if (onError(posted.error)) {
             return;
           }
           const reloaded = await fetchTimeEntriesPage({
@@ -583,12 +615,21 @@ export function useDayTimesheet(args: {
               next: reloaded.next,
               running: reloaded.running,
             });
+            announce({
+              op: "copyDay",
+              result: { ok: true, copied: "partial", from, created },
+            });
             return;
           }
-          commit({ kind: "copyFailed", day, from, error: created.error });
+          commit({ kind: "copyFailed", day, from, error: posted.error });
+          announce({
+            op: "copyDay",
+            result: { ok: false, error: posted.error },
+          });
           return;
         }
-        existing = [...existing, created.entry];
+        created += 1;
+        existing = [...existing, posted.entry];
       }
       const reloaded = await fetchTimeEntriesPage({
         credentials,
@@ -608,6 +649,10 @@ export function useDayTimesheet(args: {
         rows: reloaded.rows,
         next: reloaded.next,
         running: reloaded.running,
+      });
+      announce({
+        op: "copyDay",
+        result: { ok: true, copied: "all", from, created },
       });
     })();
   }, [commit, onError]);

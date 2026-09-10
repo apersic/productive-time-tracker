@@ -103,8 +103,12 @@ test("creating an entry posts the form and shows the row", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Development" }),
   ).toBeVisible();
-  await expect(page.getByText("Wrote tests")).toBeVisible();
+  await expect(page.locator(".entry-note")).toContainText("Wrote tests");
   await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByText("Time entry added")).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Time entry added" }),
+  ).toBeVisible();
   await expect(page.locator('input[name="duration"]')).toHaveValue("");
   await expect(editor).toHaveClass(/is-empty/);
 });
