@@ -1,8 +1,8 @@
 # Productive Time Tracker
 
-A React app that runs in the browser. You manage time entries for one day.
+A React app that runs in the browser. You log in with a Productive API token and organization ID, then manage time entries for one day.
 
-Each entry stores who worked, the duration, the day, and a multiline description of the work. You can create an entry, list the entries for the selected day, edit an entry, and delete an entry.
+Each new entry has duration, date, and a multiline description. The person on the entry is the logged-in user. You can create an entry, list the entries for the selected day, edit an entry, and delete an entry.
 
 Frontend architecture, UI components, Productive API usage, and documented assumptions are in [specification.md](specification.md).
 
@@ -11,7 +11,7 @@ Frontend architecture, UI components, Productive API usage, and documented assum
 Use Node 24.
 
 1. Copy `env-example` to `.env`.
-2. Set `BASE_URL`, `ORGANIZATION_ID`, and `VITE_ACCESS_TOKEN`. Keep the real token in `.env` only. Do not commit it.
+2. Set `VITE_BASE_URL` to `https://api.productive.io/api/v2`.
 3. Install dependencies and start the dev server.
 
 ```bash
@@ -19,9 +19,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173.
+Open http://localhost:5173. You should see **Log in**. Enter the organization ID and API token. A successful login opens **Home**. Refresh keeps you logged in. If Productive is down during refresh, the stored token stays and login shows an error. **Log out** clears the stored credentials.
 
-The running scaffold still renders the text `Home`. Time entry screens are specified in `specification.md` and are not built yet.
+Do not commit `.env`. Tokens belong in the login form and in the browser's local storage, not in git.
 
 ## Checks
 
@@ -34,4 +34,4 @@ Run these from the repo root:
 - `npm run build` type-checks and writes `dist/`.
 - `npm run test:e2e` installs Playwright's Chromium browsers if they are missing, then runs Playwright against `/`.
 
-On your machine, Playwright starts `npm run dev`. In CI it starts `npm run preview` after `npm run build`. The first local `npm run test:e2e` downloads browser binaries.
+On your machine, Playwright starts `npm run dev`. In CI it starts `npm run preview` after `npm run build`. The first local `npm run test:e2e` downloads browser binaries. Guest redirect, mocked login, and restore behavior run without secrets. The live Productive login test reads `ORGANIZATION_ID` and `VITE_ACCESS_TOKEN` from `.env` when that file exists.
