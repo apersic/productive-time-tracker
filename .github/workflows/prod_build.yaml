@@ -43,7 +43,7 @@ jobs:
           NODE_ENV: production
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium chromium-headless-shell
 
       - name: Run end-to-end tests
         run: npm run test:e2e

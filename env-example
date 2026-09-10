@@ -1,0 +1,3 @@
+BASE_URL=your-base-url
+ORGANIZATION_ID=your-organization-id
+VITE_ACCESS_TOKEN=your-access-token
