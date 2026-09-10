@@ -17,7 +17,6 @@
     "test": "qunit --require tsx/cjs \"tests/**/*-test.ts\"",
     "test:watch": "qunit --require tsx/cjs --watch \"tests/**/*-test.ts\"",
     "test:e2e": "playwright install chromium chromium-headless-shell && playwright test",
-    "assert-spa": "node scripts/assert-react-spa.mjs",
     "lintStaged": "lint-staged",
     "prepare": "husky"
   },
