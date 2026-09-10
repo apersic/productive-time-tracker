@@ -1,19 +1,25 @@
 import { Field, Grid, Input, Stack, Text } from "@chakra-ui/react";
 import { useState, type ChangeEvent } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import type { Credentials, Person } from "../lib/auth/session.ts";
 import { useAuth } from "../lib/auth/use-auth.ts";
-import { parseCalendarDay } from "../lib/time/calendar-day.ts";
-import { parseDurationDraft } from "../lib/time/duration.ts";
+import { parseCalendarDay, todayLocal } from "../lib/time/calendar-day.ts";
 import {
   isTimerBusy,
   runningEntryVisible,
   runningTimerFromSlot,
-  type ServiceId,
 } from "../lib/timesheet/day-timesheet.ts";
-import type { EntryNote } from "../lib/timesheet/entry-note.ts";
-import { CreateEntryForm } from "./home/create-entry-form.tsx";
+import {
+  blankEntryFields,
+  type EntryDraft,
+} from "../lib/timesheet/entry-draft.ts";
+import {
+  editEntryNavigationState,
+  editEntryPath,
+  parseHomeReturn,
+} from "./edit-entry-route.ts";
 import { DayEntryList } from "./home/day-entry-list.tsx";
+import { EntryForm } from "./home/entry-form.tsx";
 import { HomeHeader } from "./home/home-header.tsx";
 import { useDayTimesheet } from "./home/use-day-timesheet.ts";
 
@@ -54,6 +60,9 @@ function AuthenticatedHome(props: {
   person: Person;
   logout: () => void;
 }) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const initialDay = parseHomeReturn(location.state) ?? todayLocal();
   const {
     timesheet,
     now,
@@ -69,6 +78,7 @@ function AuthenticatedHome(props: {
     credentials: props.credentials,
     person: props.person,
     logout: props.logout,
+    initialDay,
   });
   const [createError, setCreateError] = useState<string | undefined>(undefined);
   const [creating, setCreating] = useState(false);
@@ -81,46 +91,17 @@ function AuthenticatedHome(props: {
     selectDay(parsed);
   }
 
-  async function onCreate(input: {
-    note: EntryNote;
-    duration: string;
-    service: { id: ServiceId; name: string } | undefined;
-  }): Promise<boolean> {
+  async function onCreate(draft: EntryDraft): Promise<boolean> {
     if (creating) {
-      return false;
-    }
-    const draft = parseDurationDraft(input.duration);
-    switch (draft.kind) {
-      case "ready":
-        break;
-      case "empty":
-      case "invalid":
-        setCreateError("Enter a duration.");
-        return false;
-      case "tooLong":
-        setCreateError("Must be less than 24 hours");
-        return false;
-      default: {
-        const _exhaustive: never = draft;
-        return _exhaustive;
-      }
-    }
-    const logged = draft.minutes;
-    if (!input.service) {
-      setCreateError(
-        services.status === "many"
-          ? "Select a service."
-          : "No services are available for time tracking.",
-      );
       return false;
     }
     setCreating(true);
     setCreateError(undefined);
     try {
       const result = await addEntry({
-        note: input.note,
-        logged,
-        service: input.service,
+        note: draft.note,
+        logged: draft.logged,
+        service: draft.service,
       });
       if (!result.ok) {
         setCreateError(result.error.message);
@@ -150,7 +131,9 @@ function AuthenticatedHome(props: {
         </Text>
       ) : null}
       <Grid templateColumns={{ base: "1fr", lg: "22rem 1fr" }} gap="8">
-        <CreateEntryForm
+        <EntryForm
+          initial={blankEntryFields()}
+          submitLabel="Add entry"
           services={services}
           submitting={creating}
           blocked={timesheet.entries.status === "loading"}
@@ -175,6 +158,11 @@ function AuthenticatedHome(props: {
             onLoadMore={loadMore}
             onCopyPreviousDay={copyPreviousDay}
             onRemove={removeEntry}
+            onEdit={(entry) =>
+              void navigate(editEntryPath(entry.id), {
+                state: editEntryNavigationState(entry),
+              })
+            }
           />
         </Stack>
       </Grid>

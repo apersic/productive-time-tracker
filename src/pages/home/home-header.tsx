@@ -6,6 +6,7 @@ import { personChip } from "./person-chip.ts";
 export function HomeHeader(props: {
   person: Person;
   logout: () => void;
+  title?: string;
   pauseSlot?: { disabled: boolean; onPause: () => void };
 }) {
   const chip = personChip(props.person.displayName);
@@ -21,7 +22,7 @@ export function HomeHeader(props: {
       py="4"
     >
       <Heading as="h1" size="lg">
-        Home
+        {props.title ?? "Home"}
       </Heading>
       <Flex gap="2" align="center">
         {props.pauseSlot ? (
