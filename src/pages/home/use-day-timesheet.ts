@@ -31,7 +31,6 @@ import {
 import type { EntryNote } from "../../lib/timesheet/entry-note.ts";
 import {
   previousCalendarDay,
-  todayLocal,
   type CalendarDay,
 } from "../../lib/time/calendar-day.ts";
 import { parseMinutes, type Minutes } from "../../lib/time/duration.ts";
@@ -81,9 +80,10 @@ export function useDayTimesheet(args: {
   credentials: Credentials;
   person: Person;
   logout: () => void;
+  initialDay: CalendarDay;
 }) {
   const [timesheet, setTimesheet] = useState<DayTimesheet>(() =>
-    initialDayTimesheet(todayLocal()),
+    initialDayTimesheet(args.initialDay),
   );
   const [services, setServices] = useState<ServicesList>({ status: "loading" });
   const [now, setNow] = useState(() => Date.now());

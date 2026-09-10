@@ -46,18 +46,37 @@ export function localYmd(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function jsonApiTimeEntry(id = "entry-1") {
+export function jsonApiTimeEntry(
+  id = "entry-1",
+  extras?: {
+    date?: string;
+    time?: number;
+    note?: string;
+    task?: { id: string; title: string };
+  },
+) {
   return {
     id,
     type: "time_entries",
     attributes: {
-      note: "<ul><li><p>Wrote tests</p></li></ul>",
-      date: localYmd(new Date()),
-      time: 90,
+      note: extras?.note ?? "<ul><li><p>Wrote tests</p></li></ul>",
+      date: extras?.date ?? localYmd(new Date()),
+      time: extras?.time ?? 90,
     },
     relationships: {
       service: { data: { type: "services", id: "svc-1" } },
+      ...(extras?.task
+        ? { task: { data: { type: "tasks", id: extras.task.id } } }
+        : {}),
     },
+  };
+}
+
+export function jsonApiTask(id = "task-1", title = "Ship edit") {
+  return {
+    id,
+    type: "tasks",
+    attributes: { title },
   };
 }
 
@@ -110,6 +129,30 @@ export function createdEntryResponse(body: unknown) {
       },
       relationships: {
         service: { data: { type: "services", id: serviceId } },
+      },
+    },
+    included: [jsonApiService(serviceId)],
+  };
+}
+
+export function updatedEntryResponse(id: string, body: unknown) {
+  const note = jsonApiAttribute(body, "note");
+  const date = jsonApiAttribute(body, "date");
+  const time = jsonApiAttribute(body, "time");
+  const serviceId = jsonApiRelationshipId(body, "service") ?? "svc-1";
+  const taskId = jsonApiRelationshipId(body, "task");
+  return {
+    data: {
+      id,
+      type: "time_entries",
+      attributes: {
+        note: typeof note === "string" ? note : "",
+        date: typeof date === "string" ? date : localYmd(new Date()),
+        time: typeof time === "number" ? time : 0,
+      },
+      relationships: {
+        service: { data: { type: "services", id: serviceId } },
+        ...(taskId ? { task: { data: { type: "tasks", id: taskId } } } : {}),
       },
     },
     included: [jsonApiService(serviceId)],
@@ -222,6 +265,13 @@ export async function mockTimeEntries(
   handler: (url: string) => unknown,
 ) {
   await page.route("**/api/v2/time_entries**", async (route) => {
+    if (
+      route.request().method() !== "GET" ||
+      !isTimeEntriesCollection(route.request().url())
+    ) {
+      await route.fallback();
+      return;
+    }
     await route.fulfill({
       ...jsonApiHeaders(),
       body: JSON.stringify(handler(route.request().url())),
@@ -229,10 +279,19 @@ export async function mockTimeEntries(
   });
 }
 
-function timeEntryIdFromDeleteUrl(url: string): string | undefined {
+function isTimeEntriesCollection(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname.replace(/\/$/, "");
+    return pathname.endsWith("/time_entries");
+  } catch {
+    return false;
+  }
+}
+
+function timeEntryIdFromMemberUrl(url: string): string | undefined {
   try {
     const match = new URL(url).pathname.match(/\/time_entries\/([^/]+)$/);
-    return match?.[1];
+    return match?.[1] ? decodeURIComponent(match[1]) : undefined;
   } catch {
     return undefined;
   }
@@ -247,12 +306,40 @@ export async function mockTimeEntryDelete(
       await route.fallback();
       return;
     }
-    const id = timeEntryIdFromDeleteUrl(route.request().url()) ?? "entry-1";
+    const id = timeEntryIdFromMemberUrl(route.request().url()) ?? "entry-1";
     const result = handler?.(id) ?? { status: 204 };
     await route.fulfill({
       status: result.status,
       contentType: "application/vnd.api+json",
       body: result.status === 204 ? "" : "{}",
+    });
+  });
+}
+
+export async function mockTimeEntryUpdate(
+  page: Page,
+  handler?: (id: string, body: unknown) => { status: number; body?: unknown },
+) {
+  await page.route("**/api/v2/time_entries/**", async (route) => {
+    if (route.request().method() !== "PATCH") {
+      await route.fallback();
+      return;
+    }
+    const id = timeEntryIdFromMemberUrl(route.request().url()) ?? "entry-1";
+    const requestBody = route.request().postDataJSON();
+    const result = handler?.(id, requestBody) ?? {
+      status: 200,
+      body: updatedEntryResponse(id, requestBody),
+    };
+    await route.fulfill({
+      status: result.status,
+      contentType: "application/vnd.api+json",
+      body:
+        result.body !== undefined
+          ? JSON.stringify(result.body)
+          : result.status === 204
+            ? ""
+            : "{}",
     });
   });
 }

@@ -176,7 +176,9 @@ async function openEntryDeleteConfirm(page: Page, entryId = "entry-1") {
   await expect(page.getByRole("alertdialog")).toBeVisible();
 }
 
-test("More Edit is a no-op and Cancel leaves the row", async ({ page }) => {
+test("More Edit opens the prefilled form and Cancel leaves the row", async ({
+  page,
+}) => {
   await mockProductiveIdentity(page);
   await mockServices(page);
   await mockTimers(page);
@@ -188,7 +190,15 @@ test("More Edit is a no-op and Cancel leaves the row", async ({ page }) => {
   await openHome(page);
   await page.getByRole("button", { name: "More" }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
-  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/edit\/entry-1/);
+  await expect(page.locator('input[name="duration"]')).toHaveValue("01:30");
+  await expect(page.locator(".note-editor .ProseMirror")).toContainText(
+    "Wrote tests",
+  );
+  await expect(
+    page.getByRole("button", { name: "Save changes" }),
+  ).toBeVisible();
+  await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "Development" }),
   ).toBeVisible();

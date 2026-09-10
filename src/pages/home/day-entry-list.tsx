@@ -95,14 +95,22 @@ function overlayTitle(overlay: ListOverlay): string {
 function EntryMoreMenu(props: {
   entry: TimeEntry;
   timesheet: DayTimesheet;
+  onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
 }) {
   return (
     <Menu.Root
       positioning={{ placement: "bottom-end" }}
       onSelect={(details) => {
-        if (details.value === "delete") {
-          props.onDelete(props.entry);
+        switch (details.value) {
+          case "edit":
+            props.onEdit(props.entry);
+            return;
+          case "delete":
+            props.onDelete(props.entry);
+            return;
+          default:
+            return;
         }
       }}
     >
@@ -195,6 +203,7 @@ function EntryRow(props: {
   now: number;
   onPlay: (entryId: TimeEntryId) => void;
   onPause: () => void;
+  onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
 }) {
   const running = runningTimerFromSlot(props.timesheet.timer);
@@ -238,6 +247,7 @@ function EntryRow(props: {
           <EntryMoreMenu
             entry={props.entry}
             timesheet={props.timesheet}
+            onEdit={props.onEdit}
             onDelete={props.onDelete}
           />
         </Flex>
@@ -254,10 +264,20 @@ function ReadyList(props: {
   onPlay: (entryId: TimeEntryId) => void;
   onPause: () => void;
   onLoadMore: () => void;
+  onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
 }) {
-  const { rows, page, timesheet, now, onPlay, onPause, onLoadMore, onDelete } =
-    props;
+  const {
+    rows,
+    page,
+    timesheet,
+    now,
+    onPlay,
+    onPause,
+    onLoadMore,
+    onEdit,
+    onDelete,
+  } = props;
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -314,6 +334,7 @@ function ReadyList(props: {
                 now={now}
                 onPlay={onPlay}
                 onPause={onPause}
+                onEdit={onEdit}
                 onDelete={onDelete}
               />
             </Box>
@@ -332,6 +353,7 @@ export function DayEntryList(props: {
   onLoadMore: () => void;
   onCopyPreviousDay: () => void;
   onRemove: (entryId: TimeEntryId) => Promise<void>;
+  onEdit: (entry: TimeEntry) => void;
 }) {
   const { timesheet } = props;
   const [overlay, setOverlay] = useState<ListOverlay>({ kind: "closed" });
@@ -412,6 +434,7 @@ export function DayEntryList(props: {
             onPlay={props.onPlay}
             onPause={props.onPause}
             onLoadMore={props.onLoadMore}
+            onEdit={props.onEdit}
             onDelete={requestDelete}
           />
           {timesheet.entries.page.kind === "moreFailed" ? (

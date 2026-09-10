@@ -29,25 +29,48 @@ import {
   type DurationDraft,
 } from "../../lib/time/duration.ts";
 import { parseServiceId } from "../../lib/timesheet/day-timesheet.ts";
-import { emptyNote, type EntryNote } from "../../lib/timesheet/entry-note.ts";
+import {
+  entryServiceOptions,
+  parseEntryDraft,
+  type EntryDraft,
+  type EntryFields,
+} from "../../lib/timesheet/entry-draft.ts";
 import { Card } from "../../lib/ui";
 import { NoteEditor } from "./note-editor.tsx";
 
-export function CreateEntryForm(props: {
+function spokenFromDuration(duration: string): string {
+  const draft = parseDurationDraft(duration);
+  switch (draft.kind) {
+    case "ready":
+      return formatSpokenDuration(draft.minutes);
+    case "empty":
+    case "invalid":
+    case "tooLong":
+      return emptySpokenDuration;
+    default: {
+      const _exhaustive: never = draft;
+      return _exhaustive;
+    }
+  }
+}
+
+export function EntryForm(props: {
+  initial: EntryFields;
+  submitLabel: string;
   services: ServicesList;
   submitting: boolean;
   blocked: boolean;
   error: string | undefined;
-  onSubmit: (input: {
-    note: EntryNote;
-    duration: string;
-    service: TrackableService | undefined;
-  }) => Promise<boolean>;
+  onSubmit: (draft: EntryDraft) => Promise<boolean>;
 }) {
-  const [duration, setDuration] = useState("");
-  const [spoken, setSpoken] = useState(emptySpokenDuration);
-  const [note, setNote] = useState<EntryNote>(emptyNote);
-  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [duration, setDuration] = useState(props.initial.duration);
+  const [spoken, setSpoken] = useState(() =>
+    spokenFromDuration(props.initial.duration),
+  );
+  const [note, setNote] = useState(props.initial.note);
+  const [selectedServiceId, setSelectedServiceId] = useState(
+    props.initial.service?.id ?? "",
+  );
   const [durationIssue, setDurationIssue] = useState<FieldIssue | undefined>(
     undefined,
   );
@@ -55,40 +78,38 @@ export function CreateEntryForm(props: {
     undefined,
   );
 
+  const serviceOptions = entryServiceOptions({
+    services: props.services,
+    pinned: props.initial.service,
+  });
+  const showServiceSelect = serviceOptions.length > 1;
+
   const disabled =
     props.submitting ||
     props.blocked ||
     props.services.status === "loading" ||
-    props.services.status === "none" ||
-    props.services.status === "failed";
+    props.services.status === "failed" ||
+    (props.services.status === "none" && serviceOptions.length === 0);
 
   function selectedService(): TrackableService | undefined {
-    switch (props.services.status) {
-      case "one":
-        return props.services.service;
-      case "many": {
-        const id = parseServiceId(selectedServiceId);
-        if (!id) {
-          return undefined;
-        }
-        return props.services.services.find((service) => service.id === id);
-      }
-      case "loading":
-      case "failed":
-      case "none":
-        return undefined;
-      default: {
-        const _exhaustive: never = props.services;
-        return _exhaustive;
+    const id = parseServiceId(selectedServiceId);
+    if (id) {
+      const fromOptions = serviceOptions.find((service) => service.id === id);
+      if (fromOptions) {
+        return fromOptions;
       }
     }
+    if (serviceOptions.length === 1) {
+      return serviceOptions[0];
+    }
+    return undefined;
   }
 
   function resetForm() {
-    setDuration("");
-    setSpoken(emptySpokenDuration);
-    setNote(emptyNote);
-    setSelectedServiceId("");
+    setDuration(props.initial.duration);
+    setSpoken(spokenFromDuration(props.initial.duration));
+    setNote(props.initial.note);
+    setSelectedServiceId(props.initial.service?.id ?? "");
     setDurationIssue(undefined);
     setServiceIssue(undefined);
   }
@@ -133,17 +154,24 @@ export function CreateEntryForm(props: {
     if (disabled) {
       return;
     }
-    const serviceOk =
-      props.services.status !== "many" || commitService(selectedServiceId);
+    if (showServiceSelect) {
+      commitService(selectedServiceId);
+    }
     const committed = commitDuration(duration);
-    if (!serviceOk || committed.draft.kind !== "ready") {
+    const parsed = parseEntryDraft({
+      fields: {
+        duration: committed.value,
+        service: selectedService(),
+        note,
+      },
+      services: props.services,
+    });
+    if (!parsed.ok) {
+      setDurationIssue(parsed.issues.duration);
+      setServiceIssue(parsed.issues.service);
       return;
     }
-    const ok = await props.onSubmit({
-      note,
-      duration: committed.value,
-      service: selectedService(),
-    });
+    const ok = await props.onSubmit(parsed.draft);
     if (ok) {
       resetForm();
     }
@@ -163,9 +191,9 @@ export function CreateEntryForm(props: {
               {props.services.error.message}
             </Text>
           ) : null}
-          {props.services.status === "many" ? (
+          {showServiceSelect ? (
             <ServiceField
-              services={props.services.services}
+              services={serviceOptions}
               selectedServiceId={selectedServiceId}
               issue={serviceIssue}
               disabled={disabled}
@@ -221,7 +249,7 @@ export function CreateEntryForm(props: {
             </Text>
           ) : null}
           <Button type="submit" loading={props.submitting} disabled={disabled}>
-            Add entry
+            {props.submitLabel}
           </Button>
         </Stack>
       </Card>

@@ -1,61 +1,185 @@
 import QUnit from "qunit";
-import { parseTimeEntry } from "../../src/lib/productive/time-entries";
-import type { JsonApiResource } from "../../src/lib/productive/json-api";
+import {
+  parseAccessToken,
+  parseOrganizationId,
+  parsePersonId,
+} from "../../src/lib/auth/session";
+import {
+  fetchTimeEntry,
+  updateTimeEntry,
+} from "../../src/lib/productive/time-entries";
+import { parseCalendarDay, parseMinutes } from "../../src/lib/time";
+import {
+  parseServiceId,
+  parseTaskId,
+  parseTimeEntryId,
+} from "../../src/lib/timesheet/day-timesheet";
+import { noteFromText } from "../../src/lib/timesheet/entry-note";
 
-function serviceResource(): JsonApiResource {
-  return {
-    id: "svc-1",
-    type: "services",
-    attributes: { name: "App design" },
-  };
+function credentials() {
+  const organizationId = parseOrganizationId("61648");
+  const accessToken = parseAccessToken("token-value");
+  if (!organizationId || !accessToken) {
+    throw new Error("invalid credentials");
+  }
+  return { organizationId, accessToken };
 }
 
-function createdEntry(
-  service: JsonApiResource["relationships"],
-): JsonApiResource {
-  return {
-    id: "entry-1",
-    type: "time_entries",
-    attributes: {
-      note: "<p>line a</p><p></p><p>line b</p>",
-      date: "2026-09-10",
-      time: 1,
-    },
-    relationships: {
-      service,
-    },
-  };
+function personId() {
+  const parsed = parsePersonId("1439113");
+  if (!parsed) {
+    throw new Error("invalid person id");
+  }
+  return parsed;
 }
 
-QUnit.module("parseTimeEntry");
+function entryId(value: string) {
+  const parsed = parseTimeEntryId(value);
+  if (!parsed) {
+    throw new Error(`invalid entry id ${value}`);
+  }
+  return parsed;
+}
 
-QUnit.test(
-  "rejects a create payload whose service relationship was not included",
-  (assert) => {
-    const parsed = parseTimeEntry(
-      createdEntry({ meta: { included: false } }),
-      new Map(),
-    );
-    assert.strictEqual(parsed, undefined);
-  },
-);
+function serviceId(value: string) {
+  const parsed = parseServiceId(value);
+  if (!parsed) {
+    throw new Error(`invalid service id ${value}`);
+  }
+  return parsed;
+}
 
-QUnit.test(
-  "reads an entry when the service relationship has an id",
-  (assert) => {
-    const service = serviceResource();
-    const included = new Map([["services:svc-1", service]]);
-    const parsed = parseTimeEntry(
-      createdEntry({ data: { type: "services", id: "svc-1" } }),
-      included,
-    );
-    assert.notStrictEqual(parsed, undefined);
-    if (!parsed) {
-      return;
-    }
-    assert.strictEqual(parsed.entry.id, "entry-1");
-    assert.strictEqual(parsed.entry.service.id, "svc-1");
-    assert.strictEqual(parsed.entry.service.name, "App design");
-    assert.strictEqual(parsed.entry.logged, 1);
-  },
-);
+function taskId(value: string) {
+  const parsed = parseTaskId(value);
+  if (!parsed) {
+    throw new Error(`invalid task id ${value}`);
+  }
+  return parsed;
+}
+
+function day(value: string) {
+  const parsed = parseCalendarDay(value);
+  if (!parsed) {
+    throw new Error(`invalid day ${value}`);
+  }
+  return parsed;
+}
+
+function minutes(value: number) {
+  const parsed = parseMinutes(value);
+  if (parsed === undefined) {
+    throw new Error(`invalid minutes ${value}`);
+  }
+  return parsed;
+}
+
+const sampleEntry = {
+  id: entryId("entry-1"),
+  day: day("2026-09-09"),
+  note: noteFromText("Wrote tests"),
+  service: { id: serviceId("svc-1"), name: "Development" },
+  task: { id: taskId("task-1"), title: "Ship edit" },
+  logged: minutes(90),
+};
+
+const sampleDraft = {
+  note: noteFromText("Updated note"),
+  logged: minutes(120),
+  service: { id: serviceId("svc-1"), name: "Development" },
+};
+
+QUnit.module("fetchTimeEntry", (hooks) => {
+  const originalFetch = globalThis.fetch;
+  let captured: { url: string; method: string } | undefined;
+
+  hooks.afterEach(() => {
+    globalThis.fetch = originalFetch;
+    captured = undefined;
+  });
+
+  function stubFetch(status: number, body: string) {
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      captured = { url, method: init?.method ?? "GET" };
+      return new Response(body, {
+        status,
+        headers: { "Content-Type": "application/vnd.api+json" },
+      });
+    }) as typeof fetch;
+  }
+
+  QUnit.test("empty list is not found", async (assert) => {
+    stubFetch(200, JSON.stringify({ data: [] }));
+    const result = await fetchTimeEntry({
+      credentials: credentials(),
+      personId: personId(),
+      entryId: entryId("entry-1"),
+    });
+    assert.deepEqual(result, { ok: true, found: false });
+    assert.strictEqual(captured?.method, "GET");
+    assert.ok(captured?.url.includes("filter[id]=entry-1"));
+    assert.ok(captured?.url.includes("filter[person_id]=1439113"));
+  });
+});
+
+QUnit.module("updateTimeEntry", (hooks) => {
+  const originalFetch = globalThis.fetch;
+
+  hooks.afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  function stubFetch(status: number) {
+    globalThis.fetch = (async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      return new Response(status === 204 ? null : "{}", {
+        status,
+        headers: { "Content-Type": "application/vnd.api+json" },
+      });
+    }) as typeof fetch;
+  }
+
+  QUnit.test("403 is rejected, not unauthorized", async (assert) => {
+    stubFetch(403);
+    const result = await updateTimeEntry({
+      credentials: credentials(),
+      personId: personId(),
+      entry: sampleEntry,
+      draft: sampleDraft,
+    });
+    assert.deepEqual(result, {
+      ok: false,
+      error: {
+        kind: "rejected",
+        message: "This time entry can't be updated.",
+      },
+    });
+  });
+
+  QUnit.test("404 is rejected", async (assert) => {
+    stubFetch(404);
+    const result = await updateTimeEntry({
+      credentials: credentials(),
+      personId: personId(),
+      entry: sampleEntry,
+      draft: sampleDraft,
+    });
+    assert.deepEqual(result, {
+      ok: false,
+      error: {
+        kind: "rejected",
+        message: "This time entry no longer exists.",
+      },
+    });
+  });
+});

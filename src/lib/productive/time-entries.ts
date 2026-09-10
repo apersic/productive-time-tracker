@@ -12,6 +12,7 @@ import {
   type TimeEntryId,
   type TimesheetError,
 } from "../timesheet/day-timesheet.ts";
+import type { EntryDraft } from "../timesheet/entry-draft.ts";
 import {
   parseEntryNote,
   serializeEntryNote,
@@ -193,44 +194,26 @@ export async function fetchAllTimeEntries(args: {
   return { ok: true, rows };
 }
 
-export async function createTimeEntry(args: {
-  credentials: Credentials;
+function timeEntryRelationships(args: {
   personId: PersonId;
-  day: CalendarDay;
-  note: EntryNote;
-  time: number;
-  service: { id: ServiceId; name: string };
+  serviceId: ServiceId;
   task?: TimeEntry["task"];
-}): Promise<
-  { ok: true; entry: TimeEntry } | { ok: false; error: TimesheetError }
-> {
+}): Record<string, unknown> {
   const relationships: Record<string, unknown> = {
     person: { data: { type: "people", id: args.personId } },
-    service: { data: { type: "services", id: args.service.id } },
+    service: { data: { type: "services", id: args.serviceId } },
   };
   if (args.task) {
     relationships.task = { data: { type: "tasks", id: args.task.id } };
   }
-  const result = await productiveRequest({
-    ...credentialsArgs(args.credentials),
-    path: "/time_entries?include=service,task",
-    method: "POST",
-    body: {
-      data: {
-        type: "time_entries",
-        attributes: {
-          note: serializeEntryNote(args.note),
-          date: args.day,
-          time: args.time,
-        },
-        relationships,
-      },
-    },
-  });
-  if (!result.ok) {
-    return result;
-  }
-  const unique = uniqueJsonApiResource(result.json, "time_entries");
+  return relationships;
+}
+
+function parseWrittenTimeEntry(
+  json: unknown,
+  service: { id: ServiceId; name: string },
+): { ok: true; entry: TimeEntry } | { ok: false; error: TimesheetError } {
+  const unique = uniqueJsonApiResource(json, "time_entries");
   if (!unique.ok) {
     return {
       ok: false,
@@ -240,12 +223,12 @@ export async function createTimeEntry(args: {
       },
     };
   }
-  const included = parseJsonApiIncluded(result.json);
-  if (!included.has(`services:${args.service.id}`)) {
-    included.set(`services:${args.service.id}`, {
-      id: args.service.id,
+  const included = parseJsonApiIncluded(json);
+  if (!included.has(`services:${service.id}`)) {
+    included.set(`services:${service.id}`, {
+      id: service.id,
       type: "services",
-      attributes: { name: args.service.name },
+      attributes: { name: service.name },
     });
   }
   const parsed = parseTimeEntry(unique.resource, included);
@@ -259,6 +242,126 @@ export async function createTimeEntry(args: {
     };
   }
   return { ok: true, entry: parsed.entry };
+}
+
+export type FetchTimeEntryResult =
+  | { ok: true; found: true; entry: TimeEntry }
+  | { ok: true; found: false }
+  | { ok: false; error: TimesheetError };
+
+export async function fetchTimeEntry(args: {
+  credentials: Credentials;
+  personId: PersonId;
+  entryId: TimeEntryId;
+}): Promise<FetchTimeEntryResult> {
+  const person = encodeURIComponent(args.personId);
+  const id = encodeURIComponent(args.entryId);
+  const result = await productiveGet({
+    ...credentialsArgs(args.credentials),
+    path: `/time_entries?filter[person_id]=${person}&filter[id]=${id}&include=service,task`,
+  });
+  if (!result.ok) {
+    if (result.status === 403) {
+      return { ok: true, found: false };
+    }
+    return result;
+  }
+  const page = parseTimeEntriesPage(result.json);
+  const entry = page.rows.find((row) => row.id === args.entryId);
+  if (!entry) {
+    return { ok: true, found: false };
+  }
+  return { ok: true, found: true, entry };
+}
+
+export async function createTimeEntry(args: {
+  credentials: Credentials;
+  personId: PersonId;
+  day: CalendarDay;
+  note: EntryNote;
+  time: number;
+  service: { id: ServiceId; name: string };
+  task?: TimeEntry["task"];
+}): Promise<
+  { ok: true; entry: TimeEntry } | { ok: false; error: TimesheetError }
+> {
+  const result = await productiveRequest({
+    ...credentialsArgs(args.credentials),
+    path: "/time_entries?include=service,task",
+    method: "POST",
+    body: {
+      data: {
+        type: "time_entries",
+        attributes: {
+          note: serializeEntryNote(args.note),
+          date: args.day,
+          time: args.time,
+        },
+        relationships: timeEntryRelationships({
+          personId: args.personId,
+          serviceId: args.service.id,
+          task: args.task,
+        }),
+      },
+    },
+  });
+  if (!result.ok) {
+    return result;
+  }
+  return parseWrittenTimeEntry(result.json, args.service);
+}
+
+export async function updateTimeEntry(args: {
+  credentials: Credentials;
+  personId: PersonId;
+  entry: TimeEntry;
+  draft: EntryDraft;
+}): Promise<
+  { ok: true; entry: TimeEntry } | { ok: false; error: TimesheetError }
+> {
+  const result = await productiveRequest({
+    ...credentialsArgs(args.credentials),
+    path: `/time_entries/${encodeURIComponent(args.entry.id)}?include=service,task`,
+    method: "PATCH",
+    body: {
+      data: {
+        type: "time_entries",
+        id: args.entry.id,
+        attributes: {
+          date: args.entry.day,
+          time: args.draft.logged,
+          note: serializeEntryNote(args.draft.note),
+        },
+        relationships: timeEntryRelationships({
+          personId: args.personId,
+          serviceId: args.draft.service.id,
+          task: args.entry.task,
+        }),
+      },
+    },
+  });
+  if (!result.ok) {
+    if (result.status === 403) {
+      return {
+        ok: false,
+        error: {
+          kind: "rejected",
+          message: "This time entry can't be updated.",
+        },
+      };
+    }
+    if (result.status === 404) {
+      return {
+        ok: false,
+        error: {
+          kind: "rejected",
+          message: "This time entry no longer exists.",
+        },
+      };
+    }
+    return result;
+  }
+  return parseWrittenTimeEntry(result.json, args.draft.service);
 }
 
 export async function deleteTimeEntry(args: {
