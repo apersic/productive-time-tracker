@@ -4,6 +4,7 @@ import {
   fetchAllTimeEntries,
   fetchTimeEntriesPage,
   createTimeEntry,
+  deleteTimeEntry,
 } from "../../lib/productive/time-entries.ts";
 import {
   fetchTrackableServices,
@@ -528,6 +529,58 @@ export function useDayTimesheet(args: {
     [commit, onError],
   );
 
+  const removeEntry = useCallback(
+    async (entryId: TimeEntryId): Promise<void> => {
+      const { credentials, person } = argsRef.current;
+      const day = timesheetRef.current.day;
+      if (timesheetRef.current.entries.status === "loading") {
+        return;
+      }
+      const result = await deleteTimeEntry({ credentials, entryId });
+      if (!result.ok) {
+        onError(result.error);
+        announce({ op: "deleteEntry", result });
+        return;
+      }
+      if (timesheetRef.current.day !== day) {
+        const error: TimesheetError = {
+          kind: "rejected",
+          message: "The day changed while this entry was deleting.",
+        };
+        announce({ op: "deleteEntry", result: { ok: false, error } });
+        return;
+      }
+      const next = commit({ kind: "entryRemoved", day, entryId });
+      announce({ op: "deleteEntry", result: { ok: true } });
+      if (next.entries.status !== "loading") {
+        return;
+      }
+      const page = await fetchTimeEntriesPage({
+        credentials,
+        personId: person.id,
+        day,
+      });
+      if (timesheetRef.current.day !== day) {
+        return;
+      }
+      if (!page.ok) {
+        if (onError(page.error)) {
+          return;
+        }
+        commit({ kind: "firstPageFailed", day, error: page.error });
+        return;
+      }
+      commit({
+        kind: "firstPageArrived",
+        day,
+        rows: page.rows,
+        next: page.next,
+        running: page.running,
+      });
+    },
+    [commit, onError],
+  );
+
   const copyPreviousDay = useCallback(() => {
     const current = timesheetRef.current;
     if (current.entries.status !== "empty") {
@@ -666,6 +719,7 @@ export function useDayTimesheet(args: {
     play,
     pause,
     addEntry,
+    removeEntry,
     copyPreviousDay,
   };
 }

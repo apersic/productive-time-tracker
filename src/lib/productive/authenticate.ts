@@ -9,7 +9,7 @@ import { productiveGet } from "./json-api.ts";
 export const DEFAULT_PRODUCTIVE_BASE_URL = "https://api.productive.io/api/v2";
 
 export function productiveBaseUrl(): string {
-  const fromEnv = import.meta.env.VITE_BASE_URL;
+  const fromEnv = import.meta.env?.VITE_BASE_URL;
   if (typeof fromEnv === "string" && fromEnv.trim().length > 0) {
     return fromEnv.trim();
   }
