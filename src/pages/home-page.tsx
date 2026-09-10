@@ -63,6 +63,7 @@ function AuthenticatedHome(props: {
     play,
     pause,
     addEntry,
+    removeEntry,
     copyPreviousDay,
   } = useDayTimesheet({
     credentials: props.credentials,
@@ -173,6 +174,7 @@ function AuthenticatedHome(props: {
             onPause={pause}
             onLoadMore={loadMore}
             onCopyPreviousDay={copyPreviousDay}
+            onRemove={removeEntry}
           />
         </Stack>
       </Grid>

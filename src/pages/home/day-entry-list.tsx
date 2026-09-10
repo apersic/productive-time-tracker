@@ -1,6 +1,17 @@
-import { Box, Button, Flex, Heading, Stack, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Dialog,
+  Flex,
+  Heading,
+  Menu,
+  Portal,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { DeleteIcon, EditIcon, MoreIcon } from "../../lib/icons";
 import {
   displayedMinutes,
   isTimerBusy,
@@ -15,6 +26,11 @@ import { formatCalendarDayLabel } from "../../lib/time/calendar-day.ts";
 import { formatHhMm } from "../../lib/time/duration.ts";
 import { Card } from "../../lib/ui";
 import { NoteView } from "./note-view.tsx";
+
+type ListOverlay =
+  | { kind: "closed" }
+  | { kind: "confirm"; entryId: TimeEntryId; title: string }
+  | { kind: "deleting"; entryId: TimeEntryId; title: string };
 
 function copyButtonVisible(timesheet: DayTimesheet): boolean {
   if (timesheet.entries.status !== "empty") {
@@ -48,12 +64,138 @@ function entryNoteView(note: EntryNote) {
   }
 }
 
+function overlayIsOpen(overlay: ListOverlay): boolean {
+  switch (overlay.kind) {
+    case "closed":
+      return false;
+    case "confirm":
+    case "deleting":
+      return true;
+    default: {
+      const _exhaustive: never = overlay;
+      return _exhaustive;
+    }
+  }
+}
+
+function overlayTitle(overlay: ListOverlay): string {
+  switch (overlay.kind) {
+    case "closed":
+      return "";
+    case "confirm":
+    case "deleting":
+      return overlay.title;
+    default: {
+      const _exhaustive: never = overlay;
+      return _exhaustive;
+    }
+  }
+}
+
+function EntryMoreMenu(props: {
+  entry: TimeEntry;
+  timesheet: DayTimesheet;
+  onDelete: (entry: TimeEntry) => void;
+}) {
+  return (
+    <Menu.Root
+      positioning={{ placement: "bottom-end" }}
+      onSelect={(details) => {
+        if (details.value === "delete") {
+          props.onDelete(props.entry);
+        }
+      }}
+    >
+      <Menu.Trigger asChild>
+        <Button type="button" variant="ghost" size="sm" aria-label="More">
+          <MoreIcon />
+        </Button>
+      </Menu.Trigger>
+      <Portal>
+        <Menu.Positioner>
+          <Menu.Content minW="10rem">
+            <Menu.Item value="edit">
+              <EditIcon />
+              Edit
+            </Menu.Item>
+            <Menu.Item
+              value="delete"
+              color="fg.error"
+              disabled={isTimerBusy(props.timesheet.timer)}
+            >
+              <DeleteIcon />
+              Delete
+            </Menu.Item>
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
+  );
+}
+
+function EntryDeleteDialog(props: {
+  overlay: ListOverlay;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const open = overlayIsOpen(props.overlay);
+  const deleting = props.overlay.kind === "deleting";
+  return (
+    <Dialog.Root
+      role="alertdialog"
+      placement="center"
+      size="sm"
+      open={open}
+      onOpenChange={(details) => {
+        if (!details.open && !deleting) {
+          props.onCancel();
+        }
+      }}
+      closeOnInteractOutside={!deleting}
+      closeOnEscape={!deleting}
+    >
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner px="4">
+          <Dialog.Content mx="auto">
+            <Dialog.Header>
+              <Dialog.Title>Delete this time entry?</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>{overlayTitle(props.overlay)}</Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={props.onCancel}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                colorPalette="red"
+                variant="solid"
+                onClick={props.onConfirm}
+                loading={deleting}
+                disabled={deleting}
+              >
+                Confirm
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
+  );
+}
+
 function EntryRow(props: {
   entry: TimeEntry;
   timesheet: DayTimesheet;
   now: number;
   onPlay: (entryId: TimeEntryId) => void;
   onPause: () => void;
+  onDelete: (entry: TimeEntry) => void;
 }) {
   const running = runningTimerFromSlot(props.timesheet.timer);
   const isThisRunning = running?.entryId === props.entry.id;
@@ -93,6 +235,11 @@ function EntryRow(props: {
           >
             {isThisRunning ? "Pause" : "Play"}
           </Button>
+          <EntryMoreMenu
+            entry={props.entry}
+            timesheet={props.timesheet}
+            onDelete={props.onDelete}
+          />
         </Flex>
       </Flex>
     </Card>
@@ -107,8 +254,10 @@ function ReadyList(props: {
   onPlay: (entryId: TimeEntryId) => void;
   onPause: () => void;
   onLoadMore: () => void;
+  onDelete: (entry: TimeEntry) => void;
 }) {
-  const { rows, page, timesheet, now, onPlay, onPause, onLoadMore } = props;
+  const { rows, page, timesheet, now, onPlay, onPause, onLoadMore, onDelete } =
+    props;
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -150,6 +299,7 @@ function ReadyList(props: {
             <Box
               key={virtualRow.key}
               data-index={virtualRow.index}
+              data-entry-id={entry.id}
               ref={virtualizer.measureElement}
               position="absolute"
               top="0"
@@ -164,6 +314,7 @@ function ReadyList(props: {
                 now={now}
                 onPlay={onPlay}
                 onPause={onPause}
+                onDelete={onDelete}
               />
             </Box>
           );
@@ -180,20 +331,53 @@ export function DayEntryList(props: {
   onPause: () => void;
   onLoadMore: () => void;
   onCopyPreviousDay: () => void;
+  onRemove: (entryId: TimeEntryId) => Promise<void>;
 }) {
   const { timesheet } = props;
+  const [overlay, setOverlay] = useState<ListOverlay>({ kind: "closed" });
 
+  function requestDelete(entry: TimeEntry) {
+    setOverlay({
+      kind: "confirm",
+      entryId: entry.id,
+      title: entryTitle({
+        service: entry.service,
+        task: entry.task,
+      }),
+    });
+  }
+
+  function closeOverlay() {
+    if (overlay.kind === "deleting") {
+      return;
+    }
+    setOverlay({ kind: "closed" });
+  }
+
+  async function confirmDelete() {
+    if (overlay.kind !== "confirm") {
+      return;
+    }
+    const { entryId, title } = overlay;
+    setOverlay({ kind: "deleting", entryId, title });
+    await props.onRemove(entryId);
+    setOverlay({ kind: "closed" });
+  }
+
+  let body;
   switch (timesheet.entries.status) {
     case "loading":
-      return <Text>Loading</Text>;
+      body = <Text>Loading</Text>;
+      break;
     case "failed":
-      return (
+      body = (
         <Text color="fg.error" role="alert">
           {timesheet.entries.error.message}
         </Text>
       );
+      break;
     case "empty":
-      return (
+      body = (
         <Stack gap="4">
           <Text>
             There's no tracked time for {formatCalendarDayLabel(timesheet.day)}
@@ -216,8 +400,9 @@ export function DayEntryList(props: {
           ) : null}
         </Stack>
       );
+      break;
     case "ready":
-      return (
+      body = (
         <Stack gap="3">
           <ReadyList
             rows={timesheet.entries.rows}
@@ -227,6 +412,7 @@ export function DayEntryList(props: {
             onPlay={props.onPlay}
             onPause={props.onPause}
             onLoadMore={props.onLoadMore}
+            onDelete={requestDelete}
           />
           {timesheet.entries.page.kind === "moreFailed" ? (
             <Stack gap="2">
@@ -244,9 +430,23 @@ export function DayEntryList(props: {
           ) : null}
         </Stack>
       );
+      break;
     default: {
       const _exhaustive: never = timesheet.entries;
       return _exhaustive;
     }
   }
+
+  return (
+    <>
+      {body}
+      <EntryDeleteDialog
+        overlay={overlay}
+        onCancel={closeOverlay}
+        onConfirm={() => {
+          void confirmDelete();
+        }}
+      />
+    </>
+  );
 }
