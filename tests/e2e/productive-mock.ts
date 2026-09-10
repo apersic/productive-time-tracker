@@ -148,6 +148,7 @@ export async function mockTimers(
   options?: {
     onStart?: (entryId: string) => void;
     onStop?: (timerId: string) => void;
+    failStart?: boolean;
   },
 ) {
   await page.route("**/api/v2/timers**", async (route) => {
@@ -158,6 +159,14 @@ export async function mockTimers(
         "time_entry",
       );
       options?.onStart?.(entryId ?? "entry-1");
+      if (options?.failStart) {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/vnd.api+json",
+          body: "{}",
+        });
+        return;
+      }
       await route.fulfill({
         ...jsonApiHeaders(),
         body: JSON.stringify({
