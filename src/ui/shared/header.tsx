@@ -9,9 +9,24 @@ import {
 } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import type { Person } from "../../lib/auth";
-import { PageHeading, type PageId } from "../../lib/document";
+import { PageHeading, SITE_ICON_HREF, type PageId } from "../../lib/document";
 import { LogOutIcon } from "../../lib/icons";
 import { personChip } from "./person-chip.ts";
+
+function HeaderTitle(props: { page: PageId }) {
+  return (
+    <Flex align="center" gap="2" minW="0">
+      <img
+        src={SITE_ICON_HREF}
+        alt=""
+        aria-hidden={true}
+        width={32}
+        height={32}
+      />
+      <PageHeading page={props.page} />
+    </Flex>
+  );
+}
 
 function HeaderBar(props: { children: ReactNode }) {
   return (
@@ -47,7 +62,7 @@ function HeaderBar(props: { children: ReactNode }) {
 export function HeaderSkeleton(props: { page: PageId }) {
   return (
     <HeaderBar>
-      <PageHeading page={props.page} />
+      <HeaderTitle page={props.page} />
       <SkeletonCircle size="10" aria-hidden />
     </HeaderBar>
   );
@@ -62,7 +77,7 @@ export function Header(props: {
 
   return (
     <HeaderBar>
-      <PageHeading page={props.page} />
+      <HeaderTitle page={props.page} />
       <Menu.Root
         positioning={{ placement: "bottom-end" }}
         onSelect={(details) => {

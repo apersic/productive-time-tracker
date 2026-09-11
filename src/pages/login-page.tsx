@@ -1,6 +1,8 @@
 import {
+  Box,
   Button,
   Field,
+  Flex,
   Heading,
   IconButton,
   Input,
@@ -204,17 +206,39 @@ function LoginIntro(): ReactElement {
 
 function LoginChrome(props: { children: ReactElement }) {
   return (
-    <Stack gap="8" w="full" css={{ touchAction: "manipulation" }}>
-      <Heading
-        as="h1"
-        size="2xl"
-        fontFamily="heading"
-        translate="no"
-        css={{ textWrap: "pretty" }}
-      >
-        {SITE_NAME}
-      </Heading>
-      {props.children}
-    </Stack>
+    <Flex
+      as="main"
+      id="main"
+      minH="100dvh"
+      bg="bg.subtle"
+      color="fg"
+      align="center"
+      justify="center"
+      css={{
+        paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(1rem, env(safe-area-inset-left))",
+        paddingRight: "max(1rem, env(safe-area-inset-right))",
+        "@media (min-width: 48em)": {
+          paddingLeft: "max(4rem, env(safe-area-inset-left))",
+          paddingRight: "max(4rem, env(safe-area-inset-right))",
+        },
+      }}
+    >
+      <Box w="full" maxW="md">
+        <Stack gap="8" w="full" css={{ touchAction: "manipulation" }}>
+          <Heading
+            as="h1"
+            size="2xl"
+            fontFamily="heading"
+            translate="no"
+            css={{ textWrap: "pretty" }}
+          >
+            {SITE_NAME}
+          </Heading>
+          {props.children}
+        </Stack>
+      </Box>
+    </Flex>
   );
 }

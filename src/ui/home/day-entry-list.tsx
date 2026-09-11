@@ -171,9 +171,6 @@ function EntryMoreMenu(props: {
           size="sm"
           aria-label="More"
           px="0"
-          py="0"
-          minW="0"
-          h="auto"
         >
           <MoreIcon />
         </Button>
@@ -283,15 +280,17 @@ function EntryRow(props: {
   return (
     <Card>
       <Flex align="flex-start" justify="space-between" gap="4">
-        <Stack flex="1" gap="1" minW="0">
-          <Heading as="h2" size="sm" lineClamp={2}>
-            {listing.title}
-          </Heading>
-          {listing.subtitle ? (
-            <Text color="fg.muted" textStyle="sm">
-              {listing.subtitle}
-            </Text>
-          ) : null}
+        <Stack flex="1" gap="3" minW="0">
+          <Stack gap="1">
+            <Heading as="h2" size="sm" lineClamp={2}>
+              {listing.title}
+            </Heading>
+            {listing.subtitle ? (
+              <Text color="fg.muted" textStyle="sm">
+                {listing.subtitle}
+              </Text>
+            ) : null}
+          </Stack>
           {entryNoteView(props.entry.note)}
         </Stack>
         <Flex align="center" justify="space-between" gap="4">
@@ -368,9 +367,6 @@ function TimerButton(props: {
           aria-label={timerLabel(control.kind)}
           loading
           px="0"
-          py="0"
-          minW="0"
-          h="auto"
         >
           {timerGlyph(control.kind)}
         </Button>
@@ -387,9 +383,6 @@ function TimerButton(props: {
               disabled={!control.enabled}
               onClick={props.onPlay}
               px="0"
-              py="0"
-              minW="0"
-              h="auto"
             >
               {timerGlyph(control.kind)}
             </Button>
@@ -404,9 +397,6 @@ function TimerButton(props: {
               disabled={!control.enabled}
               onClick={props.onPause}
               px="0"
-              py="0"
-              minW="0"
-              h="auto"
             >
               {timerGlyph(control.kind)}
             </Button>
