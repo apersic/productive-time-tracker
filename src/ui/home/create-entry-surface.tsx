@@ -131,6 +131,7 @@ function CreateEntryFab(props: { blocked: boolean; onOpen: () => void }) {
         aria-label="New time entry"
         onClick={props.onOpen}
         disabled={props.blocked}
+        colorPalette="blue"
         w="14"
         h="14"
         borderRadius="full"

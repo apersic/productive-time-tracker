@@ -132,17 +132,6 @@ export function noteFromText(text: string): EntryNote {
   return entryNoteFromDoc(noteSchema.node("doc", null, [paragraph]));
 }
 
-export function entryTitle(args: {
-  service: { name: string };
-  task?: { title: string };
-}): string {
-  const taskTitle = args.task?.title;
-  if (taskTitle !== undefined && taskTitle.length > 0) {
-    return `${args.service.name} · ${taskTitle}`;
-  }
-  return args.service.name;
-}
-
 function inlineFromText(text: string): PMNode[] {
   const hardBreak = noteSchema.nodes.hard_break;
   const parts = text.split("\n");

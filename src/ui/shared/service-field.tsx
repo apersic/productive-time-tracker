@@ -115,14 +115,14 @@ export function ServiceField(props: {
   const selectedName = picker.selected?.name;
 
   return (
-    <Field.Root required invalid={props.issue !== undefined}>
+    <Field.Root required invalid={props.issue !== undefined} width="full">
       <Flex align="center" gap="1">
         <Field.Label mb="0">Service</Field.Label>
         {props.issue ? (
           <FieldWarning message={fieldIssueMessage(props.issue)} />
         ) : null}
       </Flex>
-      <Box ref={triggerWrapRef}>
+      <Box ref={triggerWrapRef} width="full">
         <Button
           ref={triggerRef}
           type="button"
@@ -165,7 +165,7 @@ export function ServiceField(props: {
             zIndex="popover"
             bg="bg"
             borderWidth="1px"
-            borderColor="gray.200"
+            borderColor="border"
             borderRadius="md"
             boxShadow="md"
             py="2"

@@ -5,6 +5,7 @@ import {
 } from "../../lib/time/calendar-day.ts";
 import { parseMinutes } from "../../lib/time/duration.ts";
 import {
+  parseProjectId,
   parseServiceId,
   parseTaskId,
   parseTimeEntryId,
@@ -37,6 +38,8 @@ import {
   type JsonApiResource,
 } from "./json-api.ts";
 
+const TIME_ENTRY_INCLUDE = "service,task,service.deal.project";
+
 function credentialsArgs(credentials: Credentials) {
   return {
     baseUrl: productiveBaseUrl(),
@@ -66,6 +69,39 @@ function parseTask(
   };
 }
 
+function parseProject(
+  includedService: JsonApiResource | undefined,
+  included: Map<string, JsonApiResource>,
+): TimeEntry["project"] {
+  if (!includedService) {
+    return undefined;
+  }
+  const dealId = parseRelationshipId(includedService, "deal");
+  if (!dealId) {
+    return undefined;
+  }
+  const deal = included.get(`deals:${dealId}`);
+  if (!deal) {
+    return undefined;
+  }
+  const projectIdRaw = parseRelationshipId(deal, "project");
+  if (!projectIdRaw) {
+    return undefined;
+  }
+  const id = parseProjectId(projectIdRaw);
+  if (!id) {
+    return undefined;
+  }
+  const includedProject = included.get(`projects:${id}`);
+  if (!includedProject) {
+    return undefined;
+  }
+  return {
+    id,
+    name: readStringAttribute(includedProject.attributes, "name"),
+  };
+}
+
 export function parseTimeEntry(
   resource: JsonApiResource,
   included: Map<string, JsonApiResource>,
@@ -87,6 +123,7 @@ export function parseTimeEntry(
   }
   const includedService = included.get(`services:${serviceId}`);
   const task = parseTask(resource, included);
+  const project = parseProject(includedService, included);
   const entry: TimeEntry = {
     id,
     day,
@@ -98,6 +135,7 @@ export function parseTimeEntry(
         : "",
     },
     ...(task ? { task } : {}),
+    ...(project ? { project } : {}),
     logged,
   };
   const startedAt = readTimestampMs(resource.attributes, "timer_started_at");
@@ -150,7 +188,7 @@ export function timeEntriesPagePath(args: {
 }): string {
   const person = encodeURIComponent(args.personId);
   const date = encodeURIComponent(args.day);
-  return `/time_entries?filter[person_id]=${person}&filter[with_draft][eq]=true&filter[date][gt_eq]=${date}&filter[date][lt_eq]=${date}&include=service,task&page=1&per_page=200`;
+  return `/time_entries?filter[person_id]=${person}&filter[with_draft][eq]=true&filter[date][gt_eq]=${date}&filter[date][lt_eq]=${date}&include=${TIME_ENTRY_INCLUDE}&page=1&per_page=200`;
 }
 
 export async function fetchTimeEntriesPage(args: {
@@ -261,7 +299,7 @@ export async function fetchTimeEntry(args: {
   const id = encodeURIComponent(args.entryId);
   const result = await productiveGet({
     ...credentialsArgs(args.credentials),
-    path: `/time_entries?filter[person_id]=${person}&filter[id]=${id}&include=service,task`,
+    path: `/time_entries?filter[person_id]=${person}&filter[id]=${id}&include=${TIME_ENTRY_INCLUDE}`,
   });
   if (!result.ok) {
     if (result.status === 403) {
@@ -290,7 +328,7 @@ export async function createTimeEntry(args: {
 > {
   const result = await productiveRequest({
     ...credentialsArgs(args.credentials),
-    path: "/time_entries?include=service,task",
+    path: `/time_entries?include=${TIME_ENTRY_INCLUDE}`,
     method: "POST",
     body: {
       data: {
@@ -324,7 +362,7 @@ export async function updateTimeEntry(args: {
 > {
   const result = await productiveRequest({
     ...credentialsArgs(args.credentials),
-    path: `/time_entries/${encodeURIComponent(args.entry.id)}?include=service,task`,
+    path: `/time_entries/${encodeURIComponent(args.entry.id)}?include=${TIME_ENTRY_INCLUDE}`,
     method: "PATCH",
     body: {
       data: {

@@ -1,11 +1,18 @@
-import { Button, Stack, Text } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
 import type { ReactElement } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
 import { useAuth, type Credentials, type Person } from "../lib/auth";
 import { entryFieldsFrom } from "../features/timesheet";
 import { resolveEditEntryRoute, type EditEntryRoute } from "../features/edit";
 import { useEditEntry } from "../features/edit/hooks";
-import { EntryForm, EntryFormSkeleton, Header, HeaderSkeleton } from "../ui";
+import {
+  BackHomeLink,
+  ENTRY_FORM_WIDTH,
+  EntryForm,
+  EntryFormSkeleton,
+  Header,
+  HeaderSkeleton,
+} from "../ui";
 
 const FORM_PENDING_NAME = "Loading time entry";
 
@@ -18,10 +25,14 @@ export function EditEntryPage() {
   switch (session.kind) {
     case "booting":
       return (
-        <Stack gap="6" w="full" px="4" pb="6">
+        <>
           <HeaderSkeleton page="editEntry" />
-          <EditEntryLoadingBody />
-        </Stack>
+          <Stack as="main" id="main" gap="6" w="full" px="4" py="6" pb="6">
+            <Stack gap="4" maxW={ENTRY_FORM_WIDTH} w="full" mx="auto">
+              <EditEntryLoadingBody />
+            </Stack>
+          </Stack>
+        </>
       );
     case "anonymous":
     case "unavailable":
@@ -53,18 +64,9 @@ export function EditEntryPage() {
 }
 
 function EditEntryLoadingBody(): ReactElement {
-  const navigate = useNavigate();
   return (
     <Stack gap="4">
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => {
-          void navigate("/", { replace: true });
-        }}
-      >
-        Back to home
-      </Button>
+      <BackHomeLink />
       <Stack
         gap="4"
         role="status"
@@ -83,7 +85,6 @@ function AuthenticatedEditEntry(props: {
   logout: () => void;
   route: EditEntryRoute;
 }) {
-  const navigate = useNavigate();
   const { page, picker, save } = useEditEntry({
     credentials: props.credentials,
     person: props.person,
@@ -97,16 +98,8 @@ function AuthenticatedEditEntry(props: {
     case "missing":
       body = (
         <Stack gap="4">
+          <BackHomeLink />
           <Text>This time entry was not found.</Text>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              void navigate("/", { replace: true });
-            }}
-          >
-            Back to home
-          </Button>
         </Stack>
       );
       break;
@@ -116,15 +109,7 @@ function AuthenticatedEditEntry(props: {
     case "failed":
       body = (
         <Stack gap="4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              void navigate("/", { replace: true });
-            }}
-          >
-            Back to home
-          </Button>
+          <BackHomeLink />
           <Text color="fg.error" role="alert">
             {page.error.message}
           </Text>
@@ -135,15 +120,7 @@ function AuthenticatedEditEntry(props: {
     case "saving":
       body = (
         <Stack gap={4}>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              void navigate("/", { replace: true });
-            }}
-          >
-            Back to home
-          </Button>
+          <BackHomeLink />
           <EntryForm
             key={page.entry.id}
             initial={entryFieldsFrom(page.entry)}
@@ -164,9 +141,13 @@ function AuthenticatedEditEntry(props: {
   }
 
   return (
-    <Stack gap="6" w="full" px="4" pb="6">
+    <>
       <Header page="editEntry" person={props.person} logout={props.logout} />
-      {body}
-    </Stack>
+      <Stack as="main" id="main" gap="6" w="full" px="4" py="6" pb="6">
+        <Stack gap="4" maxW={ENTRY_FORM_WIDTH} w="full" mx="auto">
+          {body}
+        </Stack>
+      </Stack>
+    </>
   );
 }

@@ -112,6 +112,6 @@ test("client-side navigation updates the tab title", async ({ page }) => {
   await page.getByRole("button", { name: "More" }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveTitle("Edit time entry · Productive Time Tracker");
-  await page.getByRole("button", { name: "Back to home" }).click();
+  await page.getByRole("link", { name: "Back" }).click();
   await expect(page).toHaveTitle("Home · Productive Time Tracker");
 });

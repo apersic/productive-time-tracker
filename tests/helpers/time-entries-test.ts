@@ -5,12 +5,17 @@ import {
   parsePersonId,
 } from "../../src/lib/auth";
 import {
+  createTimeEntry,
   fetchTimeEntry,
+  parseTimeEntriesPage,
+  timeEntriesPagePath,
   updateTimeEntry,
 } from "../../src/providers/productive";
 import { parseCalendarDay, parseMinutes } from "../../src/lib/time";
 import {
+  entryListingCopy,
   noteFromText,
+  parseProjectId,
   parseServiceId,
   parseTaskId,
   parseTimeEntryId,
@@ -45,6 +50,14 @@ function serviceId(value: string) {
   const parsed = parseServiceId(value);
   if (!parsed) {
     throw new Error(`invalid service id ${value}`);
+  }
+  return parsed;
+}
+
+function projectId(value: string) {
+  const parsed = parseProjectId(value);
+  if (!parsed) {
+    throw new Error(`invalid project id ${value}`);
   }
   return parsed;
 }
@@ -127,21 +140,32 @@ QUnit.module("fetchTimeEntry", (hooks) => {
     assert.strictEqual(captured?.method, "GET");
     assert.ok(captured?.url.includes("filter[id]=entry-1"));
     assert.ok(captured?.url.includes("filter[person_id]=1439113"));
+    assert.ok(
+      captured?.url.includes("include=service,task,service.deal.project"),
+    );
   });
 });
 
 QUnit.module("updateTimeEntry", (hooks) => {
   const originalFetch = globalThis.fetch;
+  let capturedUrl: string | undefined;
 
   hooks.afterEach(() => {
     globalThis.fetch = originalFetch;
+    capturedUrl = undefined;
   });
 
   function stubFetch(status: number) {
     globalThis.fetch = (async (
-      _input: RequestInfo | URL,
+      input: RequestInfo | URL,
       _init?: RequestInit,
     ) => {
+      capturedUrl =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
       return new Response(status === 204 ? null : "{}", {
         status,
         headers: { "Content-Type": "application/vnd.api+json" },
@@ -164,6 +188,9 @@ QUnit.module("updateTimeEntry", (hooks) => {
         message: "This time entry can't be updated.",
       },
     });
+    assert.ok(
+      capturedUrl?.includes("include=service,task,service.deal.project"),
+    );
   });
 
   QUnit.test("404 is rejected", async (assert) => {
@@ -182,4 +209,228 @@ QUnit.module("updateTimeEntry", (hooks) => {
       },
     });
   });
+});
+
+const TIME_ENTRY_INCLUDE = "include=service,task,service.deal.project";
+
+function entryResource(args?: { taskId?: string }) {
+  return {
+    id: "e1",
+    type: "time_entries",
+    attributes: {
+      note: "",
+      date: "2026-09-10",
+      time: 90,
+    },
+    relationships: {
+      service: { data: { type: "services", id: "s1" } },
+      ...(args?.taskId
+        ? { task: { data: { type: "tasks", id: args.taskId } } }
+        : {}),
+    },
+  };
+}
+
+function serviceResource(args?: { dealId?: string; name?: string }) {
+  return {
+    id: "s1",
+    type: "services",
+    attributes: { name: args?.name ?? "Dev" },
+    ...(args?.dealId
+      ? {
+          relationships: {
+            deal: { data: { type: "deals", id: args.dealId } },
+          },
+        }
+      : {}),
+  };
+}
+
+function listingFrom(json: unknown) {
+  const entry = parseTimeEntriesPage(json).rows[0];
+  if (!entry) {
+    throw new Error("expected a parsed time entry");
+  }
+  return {
+    entry,
+    copy: entryListingCopy({
+      service: entry.service,
+      task: entry.task,
+      project: entry.project,
+    }),
+  };
+}
+
+QUnit.module("time entry include");
+
+QUnit.test("list path includes service.deal.project", (assert) => {
+  assert.ok(
+    timeEntriesPagePath({
+      personId: personId(),
+      day: day("2026-09-10"),
+    }).includes(TIME_ENTRY_INCLUDE),
+  );
+});
+
+QUnit.test("create path includes service.deal.project", async (assert) => {
+  const originalFetch = globalThis.fetch;
+  let url = "";
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    return new Response("{}", {
+      status: 400,
+      headers: { "Content-Type": "application/vnd.api+json" },
+    });
+  }) as typeof fetch;
+  try {
+    await createTimeEntry({
+      credentials: credentials(),
+      personId: personId(),
+      day: day("2026-09-09"),
+      note: noteFromText("Wrote tests"),
+      time: 90,
+      service: { id: serviceId("svc-1"), name: "Development" },
+    });
+    assert.ok(url.includes(TIME_ENTRY_INCLUDE));
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+QUnit.module("parseTimeEntriesPage project");
+
+QUnit.test("omits project when any hop is missing", (assert) => {
+  const withoutDeal = listingFrom({
+    data: [entryResource()],
+    included: [serviceResource()],
+  });
+  assert.strictEqual(withoutDeal.entry.project, undefined);
+
+  const dealMissing = listingFrom({
+    data: [entryResource()],
+    included: [serviceResource({ dealId: "d1" })],
+  });
+  assert.strictEqual(dealMissing.entry.project, undefined);
+
+  const projectRelMissing = listingFrom({
+    data: [entryResource()],
+    included: [
+      serviceResource({ dealId: "d1" }),
+      { id: "d1", type: "deals", attributes: {} },
+    ],
+  });
+  assert.strictEqual(projectRelMissing.entry.project, undefined);
+
+  const projectMissing = listingFrom({
+    data: [entryResource()],
+    included: [
+      serviceResource({ dealId: "d1" }),
+      {
+        id: "d1",
+        type: "deals",
+        attributes: {},
+        relationships: {
+          project: { data: { type: "projects", id: "p1" } },
+        },
+      },
+    ],
+  });
+  assert.strictEqual(projectMissing.entry.project, undefined);
+});
+
+QUnit.test("reads project through service.deal.project", (assert) => {
+  const { entry, copy } = listingFrom({
+    data: [entryResource({ taskId: "t1" })],
+    included: [
+      serviceResource({ dealId: "d1" }),
+      {
+        id: "d1",
+        type: "deals",
+        attributes: {},
+        relationships: {
+          project: { data: { type: "projects", id: "p1" } },
+        },
+      },
+      {
+        id: "p1",
+        type: "projects",
+        attributes: { name: "Bank" },
+      },
+      {
+        id: "t1",
+        type: "tasks",
+        attributes: { title: "Ship it" },
+      },
+    ],
+  });
+  assert.deepEqual(entry.project, {
+    id: projectId("p1"),
+    name: "Bank",
+  });
+  assert.deepEqual(copy, {
+    title: "Ship it",
+    subtitle: "Bank: Dev",
+  });
+});
+
+QUnit.test("listing copy uses literal Productive rules", (assert) => {
+  assert.deepEqual(
+    listingFrom({
+      data: [entryResource()],
+      included: [serviceResource()],
+    }).copy,
+    { title: "Dev", subtitle: undefined },
+  );
+  assert.deepEqual(
+    listingFrom({
+      data: [entryResource({ taskId: "t1" })],
+      included: [
+        serviceResource(),
+        { id: "t1", type: "tasks", attributes: { title: "Ship it" } },
+      ],
+    }).copy,
+    { title: "Ship it", subtitle: "Dev" },
+  );
+  assert.deepEqual(
+    listingFrom({
+      data: [entryResource({ taskId: "t1" })],
+      included: [
+        serviceResource({ dealId: "d1" }),
+        {
+          id: "d1",
+          type: "deals",
+          attributes: {},
+          relationships: {
+            project: { data: { type: "projects", id: "p1" } },
+          },
+        },
+        { id: "p1", type: "projects", attributes: { name: "Bank" } },
+        { id: "t1", type: "tasks", attributes: { title: "Ship it" } },
+      ],
+    }).copy,
+    { title: "Ship it", subtitle: "Bank: Dev" },
+  );
+  assert.deepEqual(
+    listingFrom({
+      data: [entryResource()],
+      included: [
+        serviceResource({ dealId: "d1" }),
+        {
+          id: "d1",
+          type: "deals",
+          attributes: {},
+          relationships: {
+            project: { data: { type: "projects", id: "p1" } },
+          },
+        },
+        { id: "p1", type: "projects", attributes: { name: "Bank" } },
+      ],
+    }).copy,
+    { title: "Dev", subtitle: "Bank" },
+  );
 });

@@ -137,9 +137,7 @@ test("cold /edit/entry-1 shows a skeleton until the gate opens", async ({
   await expect(
     page.getByRole("heading", { name: "Edit time entry" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Back to home" }),
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back" })).toBeVisible();
   await expect(page.locator('input[name="duration"]')).toHaveCount(0);
   load.open();
   await expect(page.locator('input[name="duration"]')).toHaveValue("01:30");

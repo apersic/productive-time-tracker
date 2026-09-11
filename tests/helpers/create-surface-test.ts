@@ -1,5 +1,5 @@
-import { defaultSystem } from "@chakra-ui/react";
 import QUnit from "qunit";
+import { system } from "../../src/styles/theme.ts";
 import {
   createSurface,
   dismissable,
@@ -92,9 +92,8 @@ QUnit.test(
 QUnit.test("HOME_CREATE_SPLIT pins Chakra lg at 64rem", (assert) => {
   assert.equal(HOME_CREATE_SPLIT, "lg");
   assert.equal(
-    defaultSystem.breakpoints.values.find(
-      (breakpoint) => breakpoint.name === "lg",
-    )?.min,
+    system.breakpoints.values.find((breakpoint) => breakpoint.name === "lg")
+      ?.min,
     "64rem",
   );
 });

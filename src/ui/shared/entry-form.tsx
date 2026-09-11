@@ -235,9 +235,14 @@ export function EntryForm(props: {
               }}
             />
           ) : null}
-          <Field.Root required invalid={durationIssue !== undefined}>
+          <Field.Root
+            required
+            invalid={durationIssue !== undefined}
+            width="full"
+          >
             <Field.Label>Duration</Field.Label>
             <InputGroup
+              width="full"
               endElement={
                 durationIssue ? (
                   <FieldWarning message={fieldIssueMessage(durationIssue)} />
@@ -250,6 +255,7 @@ export function EntryForm(props: {
             >
               <Input
                 name="duration"
+                width="full"
                 value={duration}
                 onChange={(event) => {
                   setDuration(event.target.value);
@@ -277,7 +283,13 @@ export function EntryForm(props: {
               {props.error}
             </Text>
           ) : null}
-          <Button type="submit" loading={props.submitting} disabled={disabled}>
+          <Button
+            type="submit"
+            colorPalette="blue"
+            loading={props.submitting}
+            disabled={disabled}
+            width="full"
+          >
             {props.submitLabel}
           </Button>
         </Stack>

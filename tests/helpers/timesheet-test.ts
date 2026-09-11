@@ -10,8 +10,8 @@ import {
   copyContentKey,
   displayedMinutes,
   emptyNote,
+  entryListingCopy,
   entryNoteFromDoc,
-  entryTitle,
   initialDayTimesheet,
   noteDocShowsPlaceholder,
   noteFromText,
@@ -646,6 +646,38 @@ QUnit.test(
   },
 );
 
+QUnit.module("entryListingCopy");
+
+QUnit.test("entryListingCopy matches Productive listing rules", (assert) => {
+  const service = { name: "Dev" };
+  assert.deepEqual(entryListingCopy({ service }), {
+    title: "Dev",
+    subtitle: undefined,
+  });
+  assert.deepEqual(
+    entryListingCopy({
+      service,
+      task: { title: "Ship it" },
+    }),
+    { title: "Ship it", subtitle: "Dev" },
+  );
+  assert.deepEqual(
+    entryListingCopy({
+      service,
+      project: { name: "Bank" },
+      task: { title: "Ship it" },
+    }),
+    { title: "Ship it", subtitle: "Bank: Dev" },
+  );
+  assert.deepEqual(
+    entryListingCopy({
+      service,
+      project: { name: "Bank" },
+    }),
+    { title: "Dev", subtitle: "Bank" },
+  );
+});
+
 QUnit.module("entry note");
 
 QUnit.test("noteIdentity is serializeEntryNote", (assert) => {
@@ -656,22 +688,6 @@ QUnit.test("noteIdentity is serializeEntryNote", (assert) => {
     "<p>Wrote tests</p>",
   );
 });
-
-QUnit.test(
-  "entryTitle is the service name when a note is present",
-  (assert) => {
-    const entry = sampleEntry();
-    assert.strictEqual(entry.note.kind, "present");
-    assert.strictEqual(entryTitle({ service: entry.service }), "Dev");
-    assert.strictEqual(
-      entryTitle({
-        service: entry.service,
-        task: { title: "Ship it" },
-      }),
-      "Dev · Ship it",
-    );
-  },
-);
 
 QUnit.test("noteFromText treats whitespace as empty", (assert) => {
   assert.deepEqual(noteFromText(""), { kind: "empty" });

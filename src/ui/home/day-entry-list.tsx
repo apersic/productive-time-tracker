@@ -23,7 +23,7 @@ import {
 } from "../../lib/icons";
 import {
   displayedMinutes,
-  entryTitle,
+  entryListingCopy,
   isTimerBusy,
   timerControl,
   type DayTimesheet,
@@ -165,7 +165,13 @@ function EntryMoreMenu(props: {
       }}
     >
       <Menu.Trigger asChild>
-        <Button type="button" variant="ghost" size="sm" aria-label="More">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          aria-label="More"
+          px="0"
+        >
           <MoreIcon />
         </Button>
       </Menu.Trigger>
@@ -265,17 +271,26 @@ function EntryRow(props: {
     timer: props.timesheet.timer,
     now: props.now,
   });
+  const listing = entryListingCopy({
+    service: props.entry.service,
+    task: props.entry.task,
+    project: props.entry.project,
+  });
 
   return (
     <Card>
       <Flex align="flex-start" justify="space-between" gap="4">
-        <Stack flex="1" gap="1" minW="0">
-          <Heading as="h2" size="sm" lineClamp={2}>
-            {entryTitle({
-              service: props.entry.service,
-              task: props.entry.task,
-            })}
-          </Heading>
+        <Stack flex="1" gap="3" minW="0">
+          <Stack gap="1">
+            <Heading as="h2" size="sm" lineClamp={2}>
+              {listing.title}
+            </Heading>
+            {listing.subtitle ? (
+              <Text color="fg.muted" textStyle="sm">
+                {listing.subtitle}
+              </Text>
+            ) : null}
+          </Stack>
           {entryNoteView(props.entry.note)}
         </Stack>
         <Flex align="center" justify="space-between" gap="4">
@@ -319,7 +334,7 @@ function timerGlyph(kind: TimerControl["kind"]): ReactElement {
   switch (kind) {
     case "play":
       return (
-        <Box color="green.600" display="inline-flex">
+        <Box color="fg.success" display="inline-flex">
           <PlayIcon />
         </Box>
       );
@@ -351,6 +366,7 @@ function TimerButton(props: {
           variant="outline"
           aria-label={timerLabel(control.kind)}
           loading
+          px="0"
         >
           {timerGlyph(control.kind)}
         </Button>
@@ -366,6 +382,7 @@ function TimerButton(props: {
               aria-label={timerLabel(control.kind)}
               disabled={!control.enabled}
               onClick={props.onPlay}
+              px="0"
             >
               {timerGlyph(control.kind)}
             </Button>
@@ -379,6 +396,7 @@ function TimerButton(props: {
               aria-label={timerLabel(control.kind)}
               disabled={!control.enabled}
               onClick={props.onPause}
+              px="0"
             >
               {timerGlyph(control.kind)}
             </Button>
@@ -528,10 +546,11 @@ export function DayEntryList(props: {
     setOverlay({
       kind: "confirm",
       entryId: entry.id,
-      title: entryTitle({
+      title: entryListingCopy({
         service: entry.service,
         task: entry.task,
-      }),
+        project: entry.project,
+      }).title,
     });
   }
 

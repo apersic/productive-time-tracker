@@ -1,4 +1,6 @@
+export * from "./back-home-link";
 export * from "./card";
+export * from "./day-field";
 export * from "./entry-form";
 export * from "./header";
 export * from "./person-chip";

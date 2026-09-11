@@ -1,24 +1,27 @@
 import {
+  Box,
   Button,
   Field,
+  Flex,
+  Heading,
   IconButton,
   Input,
   InputGroup,
+  Skeleton,
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useState, type SubmitEvent } from "react";
+import { useState, type ReactElement, type SubmitEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { parseAccessToken, parseOrganizationId, useAuth } from "../lib/auth";
-import { PageHeading } from "../lib/document";
+import { PageHeading, SITE_NAME } from "../lib/document";
+import { Card } from "../ui";
 import {
-  FieldWarning,
   fieldIssueMessage,
   presenceIssue,
   type FieldIssue,
 } from "../lib/forms";
 import { EyeIcon, EyeOffIcon } from "../lib/icons";
-import { Card } from "../ui";
 
 export function LoginPage() {
   const { session, login } = useAuth();
@@ -37,7 +40,20 @@ export function LoginPage() {
 
   switch (session.kind) {
     case "booting":
-      return <Text>Loading</Text>;
+      return (
+        <LoginChrome>
+          <Card>
+            <Stack gap="5">
+              <LoginIntro />
+              <Stack gap="5" role="status" aria-busy aria-label="Loading…">
+                <Skeleton height="10" borderRadius="md" />
+                <Skeleton height="10" borderRadius="md" />
+                <Skeleton height="10" borderRadius="md" />
+              </Stack>
+            </Stack>
+          </Card>
+        </LoginChrome>
+      );
     case "authenticated":
       return <Navigate to="/" replace />;
     case "anonymous":
@@ -51,6 +67,7 @@ export function LoginPage() {
 
   const restoreError =
     session.kind === "unavailable" ? session.error.message : undefined;
+  const formError = error ?? restoreError;
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,59 +105,49 @@ export function LoginPage() {
   }
 
   return (
-    <Card maxW="md" w="full">
-      <Stack gap="6">
-        <PageHeading page="login" />
-        <Text>Enter your Productive API token and organization ID.</Text>
-        <form noValidate onSubmit={(event) => void onSubmit(event)}>
-          <Stack gap="4">
+    <LoginChrome>
+      <form noValidate onSubmit={(event) => void onSubmit(event)}>
+        <Card>
+          <Stack gap="5">
+            <LoginIntro />
             <Field.Root required invalid={organizationIssue !== undefined}>
               <Field.Label>Organization ID</Field.Label>
-              <InputGroup
-                endElement={
-                  organizationIssue ? (
-                    <FieldWarning
-                      message={fieldIssueMessage(organizationIssue)}
-                    />
-                  ) : undefined
-                }
-              >
-                <Input
-                  name="organizationId"
-                  value={organizationId}
-                  onChange={(event) => {
-                    setOrganizationId(event.target.value);
-                    setOrganizationIssue(undefined);
-                  }}
-                  onBlur={() => {
-                    setOrganizationIssue(presenceIssue(organizationId));
-                  }}
-                  autoComplete="off"
-                />
-              </InputGroup>
+              <Input
+                name="organizationId"
+                value={organizationId}
+                onChange={(event) => {
+                  setOrganizationId(event.target.value);
+                  setOrganizationIssue(undefined);
+                }}
+                onBlur={() => {
+                  setOrganizationIssue(presenceIssue(organizationId));
+                }}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="12345…"
+                _placeholder={{ color: "fg.subtle" }}
+              />
+              {organizationIssue ? (
+                <Field.ErrorText>
+                  {fieldIssueMessage(organizationIssue)}
+                </Field.ErrorText>
+              ) : null}
             </Field.Root>
             <Field.Root required invalid={tokenIssue !== undefined}>
               <Field.Label>API token</Field.Label>
               <InputGroup
                 endElement={
-                  <>
-                    {tokenIssue ? (
-                      <FieldWarning message={fieldIssueMessage(tokenIssue)} />
-                    ) : null}
-                    <IconButton
-                      type="button"
-                      variant="ghost"
-                      size="xs"
-                      aria-label={
-                        accessTokenVisible ? "Hide token" : "Show token"
-                      }
-                      onClick={() =>
-                        setAccessTokenVisible((visible) => !visible)
-                      }
-                    >
-                      {accessTokenVisible ? <EyeOffIcon /> : <EyeIcon />}
-                    </IconButton>
-                  </>
+                  <IconButton
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    aria-label={
+                      accessTokenVisible ? "Hide token" : "Show token"
+                    }
+                    onClick={() => setAccessTokenVisible((visible) => !visible)}
+                  >
+                    {accessTokenVisible ? <EyeOffIcon /> : <EyeIcon />}
+                  </IconButton>
                 }
               >
                 <Input
@@ -155,20 +162,83 @@ export function LoginPage() {
                     setTokenIssue(presenceIssue(accessToken));
                   }}
                   autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Paste your token…"
+                  _placeholder={{ color: "fg.subtle" }}
                 />
               </InputGroup>
+              {tokenIssue ? (
+                <Field.ErrorText>
+                  {fieldIssueMessage(tokenIssue)}
+                </Field.ErrorText>
+              ) : null}
             </Field.Root>
-            {(error ?? restoreError) ? (
-              <Text color="fg.error" role="alert">
-                {error ?? restoreError}
+            {formError ? (
+              <Text color="fg.error" role="alert" aria-live="polite">
+                {formError}
               </Text>
             ) : null}
-            <Button type="submit" loading={submitting}>
+            <Button
+              type="submit"
+              colorPalette="blue"
+              loading={submitting}
+              width="full"
+            >
               Log in
             </Button>
           </Stack>
-        </form>
-      </Stack>
-    </Card>
+        </Card>
+      </form>
+    </LoginChrome>
+  );
+}
+
+function LoginIntro(): ReactElement {
+  return (
+    <Stack gap="3">
+      <PageHeading page="login" as="h2" />
+      <Text color="fg.muted" textStyle="sm" maxW="65ch">
+        Enter your Productive API token and organization ID.
+      </Text>
+    </Stack>
+  );
+}
+
+function LoginChrome(props: { children: ReactElement }) {
+  return (
+    <Flex
+      as="main"
+      id="main"
+      minH="100dvh"
+      bg="bg.subtle"
+      color="fg"
+      align="center"
+      justify="center"
+      css={{
+        paddingTop: "max(2.5rem, env(safe-area-inset-top))",
+        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
+        paddingLeft: "max(1rem, env(safe-area-inset-left))",
+        paddingRight: "max(1rem, env(safe-area-inset-right))",
+        "@media (min-width: 48em)": {
+          paddingLeft: "max(4rem, env(safe-area-inset-left))",
+          paddingRight: "max(4rem, env(safe-area-inset-right))",
+        },
+      }}
+    >
+      <Box w="full" maxW="md">
+        <Stack gap="8" w="full" css={{ touchAction: "manipulation" }}>
+          <Heading
+            as="h1"
+            size="2xl"
+            fontFamily="heading"
+            translate="no"
+            css={{ textWrap: "pretty" }}
+          >
+            {SITE_NAME}
+          </Heading>
+          {props.children}
+        </Stack>
+      </Box>
+    </Flex>
   );
 }
