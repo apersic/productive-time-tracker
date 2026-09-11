@@ -1,10 +1,10 @@
 import QUnit from "qunit";
-import { emptyNote } from "../../src/lib/timesheet/entry-note";
 import {
-  parseEntryDraft,
+  emptyNote,
   entryServiceOptions,
-} from "../../src/lib/timesheet/entry-draft";
-import { parseServiceId } from "../../src/lib/timesheet/day-timesheet";
+  parseEntryDraft,
+  parseServiceId,
+} from "../../src/features/timesheet";
 import { parseMinutes } from "../../src/lib/time";
 
 function serviceId(value: string) {

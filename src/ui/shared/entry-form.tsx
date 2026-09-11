@@ -20,7 +20,7 @@ import {
 import type {
   ServicesList,
   TrackableService,
-} from "../../lib/productive/services.ts";
+} from "../../providers/productive";
 import {
   emptySpokenDuration,
   formatHhMm,
@@ -28,14 +28,14 @@ import {
   parseDurationDraft,
   type DurationDraft,
 } from "../../lib/time/duration.ts";
-import { parseServiceId } from "../../lib/timesheet/day-timesheet.ts";
 import {
   entryServiceOptions,
   parseEntryDraft,
+  parseServiceId,
   type EntryDraft,
   type EntryFields,
-} from "../../lib/timesheet/entry-draft.ts";
-import { Card } from "../../lib/ui";
+} from "../../features/timesheet";
+import { Card } from "./card.tsx";
 import { NoteEditor } from "./note-editor.tsx";
 
 function spokenFromDuration(duration: string): string {

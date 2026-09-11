@@ -1,27 +1,22 @@
 import { Field, Grid, Input, Stack, Text } from "@chakra-ui/react";
 import { useState, type ChangeEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
-import type { Credentials, Person } from "../lib/auth/session.ts";
-import { useAuth } from "../lib/auth/use-auth.ts";
+import { useAuth, type Credentials, type Person } from "../lib/auth";
 import { parseCalendarDay, todayLocal } from "../lib/time/calendar-day.ts";
 import {
+  blankEntryFields,
   isTimerBusy,
   runningEntryVisible,
   runningTimerFromSlot,
-} from "../lib/timesheet/day-timesheet.ts";
-import {
-  blankEntryFields,
   type EntryDraft,
-} from "../lib/timesheet/entry-draft.ts";
+} from "../features/timesheet";
+import { useDayTimesheet } from "../features/timesheet/hooks";
 import {
   editEntryNavigationState,
   editEntryPath,
   parseHomeReturn,
-} from "./edit-entry-route.ts";
-import { DayEntryList } from "./home/day-entry-list.tsx";
-import { EntryForm } from "./home/entry-form.tsx";
-import { HomeHeader } from "./home/home-header.tsx";
-import { useDayTimesheet } from "./home/use-day-timesheet.ts";
+} from "../features/edit";
+import { DayEntryList, EntryForm, Header } from "../ui";
 
 export function HomePage() {
   const { session, logout } = useAuth();
@@ -115,7 +110,7 @@ function AuthenticatedHome(props: {
 
   return (
     <Stack gap="6" w="full" px="4" pb="6">
-      <HomeHeader
+      <Header
         person={props.person}
         logout={props.logout}
         pauseSlot={

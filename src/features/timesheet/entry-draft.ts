@@ -1,11 +1,14 @@
-import { durationFieldIssue, type FieldIssue } from "../forms";
-import type { ServicesList, TrackableService } from "../productive/services.ts";
+import { durationFieldIssue, type FieldIssue } from "../../lib/forms";
+import type {
+  ServicesList,
+  TrackableService,
+} from "../../providers/productive/services-service.ts";
 import {
   formatHhMm,
   parseDurationDraft,
   type Minutes,
-} from "../time/duration.ts";
-import type { TimeEntry } from "./day-timesheet.ts";
+} from "../../lib/time/duration.ts";
+import type { TimeEntry } from "./timesheet-model.ts";
 import { emptyNote, type EntryNote } from "./entry-note.ts";
 
 export type EntryFields = {

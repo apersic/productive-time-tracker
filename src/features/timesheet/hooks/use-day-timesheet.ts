@@ -1,20 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Credentials, Person } from "../../lib/auth/session.ts";
+import type { Credentials, Person } from "../../../lib/auth";
 import {
-  fetchAllTimeEntries,
-  fetchTimeEntriesPage,
   createTimeEntry,
   deleteTimeEntry,
-} from "../../lib/productive/time-entries.ts";
-import {
-  fetchTrackableServices,
-  type ServicesList,
-} from "../../lib/productive/services.ts";
-import {
+  fetchAllTimeEntries,
   fetchRunningTimer,
+  fetchTimeEntriesPage,
+  fetchTrackableServices,
   startTimer,
   stopTimer,
-} from "../../lib/productive/timers.ts";
+  type ServicesList,
+} from "../../../providers/productive";
 import {
   alreadyCopied,
   applyFact,
@@ -22,19 +18,19 @@ import {
   initialDayTimesheet,
   runningTimerFromSlot,
   type DayTimesheet,
+  type EntryNote,
   type ServiceId,
   type TimeEntry,
   type TimeEntryId,
   type TimesheetError,
   type TimesheetFact,
-} from "../../lib/timesheet/day-timesheet.ts";
-import type { EntryNote } from "../../lib/timesheet/entry-note.ts";
+} from "..";
 import {
   previousCalendarDay,
   type CalendarDay,
-} from "../../lib/time/calendar-day.ts";
-import { parseMinutes, type Minutes } from "../../lib/time/duration.ts";
-import { announce } from "../../lib/notice";
+} from "../../../lib/time/calendar-day.ts";
+import { parseMinutes, type Minutes } from "../../../lib/time/duration.ts";
+import { announce } from "../../../lib/notice";
 
 const parsedZeroMinutes = parseMinutes(0);
 if (parsedZeroMinutes === undefined) {

@@ -1,20 +1,18 @@
-import { isRecord } from "../lib/helpers/is-record.ts";
+import { isRecord } from "../../lib/helpers/is-record.ts";
 import {
   parseCalendarDay,
   type CalendarDay,
-} from "../lib/time/calendar-day.ts";
-import { parseMinutes } from "../lib/time/duration.ts";
+} from "../../lib/time/calendar-day.ts";
+import { parseMinutes } from "../../lib/time/duration.ts";
 import {
+  parseEntryNote,
   parseServiceId,
   parseTaskId,
   parseTimeEntryId,
+  serializeEntryNote,
   type TimeEntry,
   type TimeEntryId,
-} from "../lib/timesheet/day-timesheet.ts";
-import {
-  parseEntryNote,
-  serializeEntryNote,
-} from "../lib/timesheet/entry-note.ts";
+} from "../timesheet";
 
 export type EditEntryNavigationState = {
   kind: "editEntry";

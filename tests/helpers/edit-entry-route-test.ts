@@ -4,18 +4,16 @@ import {
   parseServiceId,
   parseTaskId,
   parseTimeEntryId,
-} from "../../src/lib/timesheet/day-timesheet";
-import {
   noteFromText,
   serializeEntryNote,
-} from "../../src/lib/timesheet/entry-note";
+} from "../../src/features/timesheet";
 import {
   editEntryNavigationState,
   editEntryPath,
   homeReturnState,
   parseHomeReturn,
   resolveEditEntryRoute,
-} from "../../src/pages/edit-entry-route";
+} from "../../src/features/edit";
 
 function day(value: string) {
   const parsed = parseCalendarDay(value);

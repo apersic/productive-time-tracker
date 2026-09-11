@@ -3,18 +3,18 @@ import {
   parseAccessToken,
   parseOrganizationId,
   parsePersonId,
-} from "../../src/lib/auth/session";
+} from "../../src/lib/auth";
 import {
   fetchTimeEntry,
   updateTimeEntry,
-} from "../../src/lib/productive/time-entries";
+} from "../../src/providers/productive";
 import { parseCalendarDay, parseMinutes } from "../../src/lib/time";
 import {
+  noteFromText,
   parseServiceId,
   parseTaskId,
   parseTimeEntryId,
-} from "../../src/lib/timesheet/day-timesheet";
-import { noteFromText } from "../../src/lib/timesheet/entry-note";
+} from "../../src/features/timesheet";
 
 function credentials() {
   const organizationId = parseOrganizationId("61648");

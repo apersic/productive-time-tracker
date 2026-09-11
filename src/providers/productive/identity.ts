@@ -1,6 +1,6 @@
-import type { AuthenticateResult } from "../auth/restore-outcome.ts";
-import type { AuthError, Credentials, Person } from "../auth/session.ts";
-import { displayNameFromParts, parsePersonId } from "../auth/session.ts";
+import type { AuthenticateResult } from "../../lib/auth/restore-outcome.ts";
+import type { AuthError, Credentials, Person } from "../../lib/auth/session.ts";
+import { displayNameFromParts, parsePersonId } from "../../lib/auth/session.ts";
 import { readStringAttribute, uniqueJsonApiResource } from "./json-api.ts";
 
 export function currentUserFromPayload(

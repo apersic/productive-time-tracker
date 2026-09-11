@@ -1,5 +1,5 @@
-import type { AuthError } from "../auth/session.ts";
-import { isRecord } from "../helpers/is-record.ts";
+import type { AuthError } from "../../lib/auth/session.ts";
+import { isRecord } from "../../lib/helpers/is-record.ts";
 
 export type JsonApiResource = {
   id: string;

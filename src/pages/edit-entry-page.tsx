@@ -1,15 +1,10 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
-import type { Credentials, Person } from "../lib/auth/session.ts";
-import { useAuth } from "../lib/auth/use-auth.ts";
-import { entryFieldsFrom } from "../lib/timesheet/entry-draft.ts";
-import {
-  resolveEditEntryRoute,
-  type EditEntryRoute,
-} from "./edit-entry-route.ts";
-import { useEditEntry } from "./edit/use-edit-entry.ts";
-import { EntryForm } from "./home/entry-form.tsx";
-import { HomeHeader } from "./home/home-header.tsx";
+import { useAuth, type Credentials, type Person } from "../lib/auth";
+import { entryFieldsFrom } from "../features/timesheet";
+import { resolveEditEntryRoute, type EditEntryRoute } from "../features/edit";
+import { useEditEntry } from "../features/edit/hooks";
+import { EntryForm, Header } from "../ui";
 
 export function EditEntryPage() {
   const { session, logout } = useAuth();
@@ -137,7 +132,7 @@ function AuthenticatedEditEntry(props: {
 
   return (
     <Stack gap="6" w="full" px="4" pb="6">
-      <HomeHeader
+      <Header
         title="Edit time entry"
         person={props.person}
         logout={props.logout}
