@@ -16,5 +16,10 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "playwright.config.ts"]
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "src/lib/document/site.ts",
+    "src/lib/document/shell.ts"
+  ]
 }

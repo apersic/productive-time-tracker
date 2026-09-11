@@ -38,3 +38,22 @@ QUnit.test(
     assert.deepEqual(calls, [2]);
   },
 );
+
+QUnit.test(
+  "cancel drops the pending call and a later call still fires",
+  async (assert) => {
+    const calls: number[] = [];
+    const debounced = debounce((value: number) => {
+      calls.push(value);
+    }, 30);
+
+    debounced(1);
+    debounced.cancel();
+    await wait(50);
+    assert.deepEqual(calls, []);
+
+    debounced(2);
+    await wait(50);
+    assert.deepEqual(calls, [2]);
+  },
+);

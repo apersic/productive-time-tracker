@@ -42,6 +42,7 @@ lerna-debug.log*
 
 # cursor
 .cursor
+.arena
 
 # local audit trail
 /decisions.tsv
