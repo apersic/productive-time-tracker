@@ -30,6 +30,9 @@ export const system = createSystem(defaultConfig, {
         fg: {
           DEFAULT: { value: { _light: "{colors.text}" } },
         },
+        gray: {
+          focusRing: { value: { _light: "{colors.blue.500}" } },
+        },
       },
     },
   },

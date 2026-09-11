@@ -5,7 +5,7 @@ import { BrowserRouter } from "react-router";
 import App from "./App.tsx";
 import { AuthProvider } from "./lib/auth";
 import { NoticeHost } from "./lib/notice";
-import { system } from "./lib/theme.ts";
+import { system } from "./styles/theme.ts";
 import "./styles/main.css";
 
 const root = document.getElementById("root");

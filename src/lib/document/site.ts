@@ -5,7 +5,7 @@
  * Runtime never writes meta tags. PageHeading only assigns document.title.
  */
 
-import { PALETTE } from "../palette.ts";
+import { PALETTE } from "../../styles/palette.ts";
 
 export type AssetPath = `/${string}`;
 

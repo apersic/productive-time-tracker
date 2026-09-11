@@ -1,5 +1,5 @@
 import QUnit from "qunit";
-import { system } from "../../src/lib/theme.ts";
+import { system } from "../../src/styles/theme.ts";
 import {
   createSurface,
   dismissable,
