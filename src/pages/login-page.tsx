@@ -1,7 +1,6 @@
 import {
   Button,
   Field,
-  Heading,
   IconButton,
   Input,
   InputGroup,
@@ -11,6 +10,7 @@ import {
 import { useState, type SubmitEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { parseAccessToken, parseOrganizationId, useAuth } from "../lib/auth";
+import { PageHeading } from "../lib/document";
 import {
   FieldWarning,
   fieldIssueMessage,
@@ -90,9 +90,7 @@ export function LoginPage() {
   return (
     <Card maxW="md" w="full">
       <Stack gap="6">
-        <Heading as="h1" size="lg">
-          Log in
-        </Heading>
+        <PageHeading page="login" />
         <Text>Enter your Productive API token and organization ID.</Text>
         <form noValidate onSubmit={(event) => void onSubmit(event)}>
           <Stack gap="4">
