@@ -3,13 +3,7 @@ import { useState, type ChangeEvent } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
 import { useAuth, type Credentials, type Person } from "../lib/auth";
 import { parseCalendarDay, todayLocal } from "../lib/time/calendar-day.ts";
-import {
-  blankEntryFields,
-  isTimerBusy,
-  runningEntryVisible,
-  runningTimerFromSlot,
-  type EntryDraft,
-} from "../features/timesheet";
+import { blankEntryFields, type EntryDraft } from "../features/timesheet";
 import { useDayTimesheet } from "../features/timesheet/hooks";
 import {
   editEntryNavigationState,
@@ -110,16 +104,7 @@ function AuthenticatedHome(props: {
 
   return (
     <Stack gap="6" w="full" px="4" pb="6">
-      <Header
-        person={props.person}
-        logout={props.logout}
-        pauseSlot={
-          runningTimerFromSlot(timesheet.timer) &&
-          !runningEntryVisible(timesheet)
-            ? { disabled: isTimerBusy(timesheet.timer), onPause: pause }
-            : undefined
-        }
-      />
+      <Header person={props.person} logout={props.logout} />
       {timesheet.timer.kind === "failed" ? (
         <Text color="fg.error" role="alert">
           {timesheet.timer.error.message}

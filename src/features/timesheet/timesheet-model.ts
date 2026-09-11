@@ -217,14 +217,6 @@ export function isTimerBusy(slot: TimerSlot): boolean {
   }
 }
 
-export function runningEntryVisible(state: DayTimesheet): boolean {
-  const running = runningTimerFromSlot(state.timer);
-  if (!running || state.entries.status !== "ready") {
-    return false;
-  }
-  return state.entries.rows.some((row) => row.id === running.entryId);
-}
-
 export function displayedMinutes(args: {
   logged: Minutes;
   entryId: TimeEntryId;

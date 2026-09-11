@@ -23,7 +23,6 @@ import {
   parseTimeEntryId,
   parseTimerId,
   reconstructTimerSlot,
-  runningEntryVisible,
   serializeEntryNote,
   type DayTimesheet,
   type RunningTimer,
@@ -603,28 +602,6 @@ QUnit.test("moreRequested retries from moreFailed", (assert) => {
     page: { kind: "loadingMore", next: "/time_entries?page=2" },
   });
 });
-
-QUnit.test(
-  "runningEntryVisible is false when the running timer is not in the list",
-  (assert) => {
-    const tenth = day("2026-09-10");
-    const timer = {
-      ...sampleTimer(1_000),
-      entryId: entryId("other"),
-      day: day("2026-09-09"),
-    };
-    const state: DayTimesheet = {
-      day: tenth,
-      entries: {
-        status: "ready",
-        rows: [sampleEntry()],
-        page: { kind: "complete" },
-      },
-      timer: { kind: "running", timer },
-    };
-    assert.strictEqual(runningEntryVisible(state), false);
-  },
-);
 
 QUnit.module("copy skip");
 
