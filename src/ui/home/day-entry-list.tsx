@@ -123,13 +123,16 @@ function EntryMoreMenu(props: {
       <Portal>
         <Menu.Positioner>
           <Menu.Content minW="10rem">
-            <Menu.Item value="edit">
+            <Menu.Item value="edit" cursor="pointer">
               <EditIcon />
               Edit
             </Menu.Item>
             <Menu.Item
               value="delete"
               color="fg.error"
+              cursor={
+                isTimerBusy(props.timesheet.timer) ? "not-allowed" : "pointer"
+              }
               disabled={isTimerBusy(props.timesheet.timer)}
             >
               <DeleteIcon />

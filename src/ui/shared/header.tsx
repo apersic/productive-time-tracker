@@ -62,7 +62,7 @@ export function Header(props: {
               <Menu.Content minW="10rem">
                 <Menu.ItemGroup>
                   <Menu.ItemGroupLabel>{chip.label}</Menu.ItemGroupLabel>
-                  <Menu.Item value="logout" color="fg.error">
+                  <Menu.Item value="logout" color="fg.error" cursor="pointer">
                     <LogOutIcon />
                     Log out
                   </Menu.Item>
