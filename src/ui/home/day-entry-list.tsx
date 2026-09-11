@@ -11,7 +11,13 @@ import {
 } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useRef, useState } from "react";
-import { DeleteIcon, EditIcon, MoreIcon } from "../../lib/icons";
+import {
+  DeleteIcon,
+  EditIcon,
+  MoreIcon,
+  PlayIcon,
+  StopIcon,
+} from "../../lib/icons";
 import {
   displayedMinutes,
   entryTitle,
@@ -240,13 +246,18 @@ function EntryRow(props: {
             type="button"
             size="sm"
             variant="outline"
-            aria-label={isThisRunning ? "Pause" : "Play"}
+            aria-label={isThisRunning ? "Stop" : "Play"}
             disabled={busy}
             onClick={() =>
               isThisRunning ? props.onPause() : props.onPlay(props.entry.id)
             }
           >
-            {isThisRunning ? "Pause" : "Play"}
+            <Box
+              color={isThisRunning ? "fg.error" : "green.600"}
+              display="inline-flex"
+            >
+              {isThisRunning ? <StopIcon /> : <PlayIcon />}
+            </Box>
           </Button>
           <EntryMoreMenu
             entry={props.entry}
