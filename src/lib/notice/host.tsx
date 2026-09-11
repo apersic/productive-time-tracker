@@ -105,7 +105,7 @@ export function NoticeHost() {
         css={{
           "--notice-offset-bottom":
             "calc(1rem + env(safe-area-inset-bottom, 0px) + max(0px, 100lvh - 100dvh))",
-          "@media (max-width: 48rem)": {
+          "@media (max-width: 63.9975rem)": {
             "--notice-offset-bottom":
               "calc(1rem + env(safe-area-inset-bottom, 0px) + max(3.5rem, 100lvh - 100dvh))",
           },
