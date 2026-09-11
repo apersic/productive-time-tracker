@@ -6,11 +6,10 @@ import {
   fetchAllTimeEntries,
   fetchRunningTimer,
   fetchTimeEntriesPage,
-  fetchTrackableServices,
   startTimer,
   stopTimer,
-  type ServicesList,
 } from "../../../providers/productive";
+import { useServicePicker } from "./use-service-picker.ts";
 import {
   alreadyCopied,
   applyFact,
@@ -81,7 +80,6 @@ export function useDayTimesheet(args: {
   const [timesheet, setTimesheet] = useState<DayTimesheet>(() =>
     initialDayTimesheet(args.initialDay),
   );
-  const [services, setServices] = useState<ServicesList>({ status: "loading" });
   const [now, setNow] = useState(() => Date.now());
   const timesheetRef = useRef(timesheet);
   const argsRef = useRef(args);
@@ -128,34 +126,12 @@ export function useDayTimesheet(args: {
     };
   }, [timesheet.timer.kind]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const { credentials, person } = argsRef.current;
-    void fetchTrackableServices({
-      credentials,
-      personId: person.id,
-    }).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (!result.ok) {
-        if (result.error.kind === "unauthorized") {
-          argsRef.current.logout();
-          return;
-        }
-        setServices({ status: "failed", error: result.error });
-        return;
-      }
-      setServices(result.list);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    args.person.id,
-    args.credentials.accessToken,
-    args.credentials.organizationId,
-  ]);
+  const picker = useServicePicker({
+    credentials: args.credentials,
+    personId: args.person.id,
+    context: { kind: "ready", day: timesheet.day, pinned: undefined },
+    onUnauthorized: args.logout,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -709,7 +685,7 @@ export function useDayTimesheet(args: {
   return {
     timesheet,
     now,
-    services,
+    picker,
     selectDay,
     loadMore,
     play,

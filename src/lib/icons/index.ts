@@ -1,3 +1,4 @@
+export { default as ChevronIcon } from "./chevron-icon.tsx";
 export { default as DeleteIcon } from "./delete-icon.tsx";
 export { default as EditIcon } from "./edit-icon.tsx";
 export { default as EyeIcon } from "./eye-icon.tsx";

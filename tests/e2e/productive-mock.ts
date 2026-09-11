@@ -177,11 +177,28 @@ export async function mockProductiveIdentity(page: Page) {
 export async function mockServices(
   page: Page,
   data: unknown[] = [jsonApiService()],
+  included: unknown[] = [],
 ) {
   await page.route("**/api/v2/services**", async (route) => {
+    const url = route.request().url();
+    const query = new URL(url).searchParams.get("filter[query]");
+    let rows = data;
+    if (query !== null && query.length > 0) {
+      const needle = query.toLowerCase();
+      rows = data.filter((item) => {
+        if (!isRecord(item) || !isRecord(item.attributes)) {
+          return false;
+        }
+        const name = item.attributes.name;
+        return typeof name === "string" && name.toLowerCase().includes(needle);
+      });
+    }
     await route.fulfill({
       ...jsonApiHeaders(),
-      body: JSON.stringify({ data }),
+      body: JSON.stringify({
+        data: rows,
+        ...(included.length > 0 ? { included } : {}),
+      }),
     });
   });
 }

@@ -1,9 +1,12 @@
 import { Button, Dialog, Portal, useBreakpointValue } from "@chakra-ui/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { blankEntryFields, type EntryDraft } from "../../features/timesheet";
+import {
+  blankEntryFields,
+  type EntryDraft,
+  type ServicePicker,
+} from "../../features/timesheet";
 import { PlusIcon, XIcon } from "../../lib/icons";
-import type { ServicesList } from "../../providers/productive";
 import { EntryForm } from "../shared";
 import {
   createSurface,
@@ -26,7 +29,7 @@ function useCreateLayout(): CreateLayout {
 }
 
 export function CreateEntrySurface(props: {
-  services: ServicesList;
+  picker: ServicePicker;
   blocked: boolean;
   onCreate: (draft: EntryDraft) => Promise<CreateResult>;
 }) {
@@ -68,7 +71,7 @@ export function CreateEntrySurface(props: {
       return (
         <CreateEntryForm
           status={surface.status}
-          services={props.services}
+          picker={props.picker}
           blocked={props.blocked}
           onSubmit={submit}
         />
@@ -84,7 +87,7 @@ export function CreateEntrySurface(props: {
           <CreateEntryFab blocked={props.blocked} onOpen={open} />
           <CreateEntryDialog
             status={surface.status}
-            services={props.services}
+            picker={props.picker}
             blocked={props.blocked}
             onClose={close}
             onSubmit={submit}
@@ -101,7 +104,7 @@ export function CreateEntrySurface(props: {
 
 function CreateEntryForm(props: {
   status: CreateStatus;
-  services: ServicesList;
+  picker: ServicePicker;
   blocked: boolean;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
 }) {
@@ -110,7 +113,7 @@ function CreateEntryForm(props: {
     <EntryForm
       initial={blankEntryFields()}
       submitLabel="Add entry"
-      services={props.services}
+      picker={props.picker}
       submitting={submitting}
       blocked={props.blocked}
       error={error}
@@ -141,7 +144,7 @@ function CreateEntryFab(props: { blocked: boolean; onOpen: () => void }) {
 
 function CreateEntryDialog(props: {
   status: CreateStatus;
-  services: ServicesList;
+  picker: ServicePicker;
   blocked: boolean;
   onClose: () => void;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
@@ -192,7 +195,7 @@ function CreateEntryDialog(props: {
             <Dialog.Body pb="6">
               <CreateEntryForm
                 status={props.status}
-                services={props.services}
+                picker={props.picker}
                 blocked={props.blocked}
                 onSubmit={props.onSubmit}
               />

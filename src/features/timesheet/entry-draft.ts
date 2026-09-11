@@ -1,8 +1,4 @@
 import { durationFieldIssue, type FieldIssue } from "../../lib/forms";
-import type {
-  ServicesList,
-  TrackableService,
-} from "../../providers/productive/services-service.ts";
 import {
   formatHhMm,
   parseDurationDraft,
@@ -10,6 +6,7 @@ import {
 } from "../../lib/time/duration.ts";
 import type { TimeEntry } from "./timesheet-model.ts";
 import { emptyNote, type EntryNote } from "./entry-note.ts";
+import type { ServicesList, TrackableService } from "./service-catalog.ts";
 
 export type EntryFields = {
   duration: string;
@@ -43,55 +40,23 @@ export function entryFieldsFrom(entry: TimeEntry): EntryFields {
   };
 }
 
-function listedServices(services: ServicesList): readonly TrackableService[] {
-  switch (services.status) {
-    case "one":
-      return [services.service];
-    case "many":
-      return services.services;
-    case "loading":
-    case "failed":
-    case "none":
-      return [];
-    default: {
-      const _exhaustive: never = services;
-      return _exhaustive;
-    }
-  }
-}
-
-export function entryServiceOptions(args: {
-  services: ServicesList;
-  pinned: TrackableService | undefined;
-}): readonly TrackableService[] {
-  const listed = listedServices(args.services);
-  const pinned = args.pinned;
-  if (!pinned) {
-    return listed;
-  }
-  if (listed.some((service) => service.id === pinned.id)) {
-    return listed;
-  }
-  return [...listed, pinned];
-}
-
 function resolvedService(args: {
   fields: EntryFields;
-  services: ServicesList;
+  availability: ServicesList;
 }): TrackableService | undefined {
   if (args.fields.service) {
     return args.fields.service;
   }
-  switch (args.services.status) {
+  switch (args.availability.status) {
     case "one":
-      return args.services.service;
+      return args.availability.service;
     case "many":
     case "loading":
     case "failed":
     case "none":
       return undefined;
     default: {
-      const _exhaustive: never = args.services;
+      const _exhaustive: never = args.availability;
       return _exhaustive;
     }
   }
@@ -99,7 +64,7 @@ function resolvedService(args: {
 
 export function parseEntryDraft(args: {
   fields: EntryFields;
-  services: ServicesList;
+  availability: ServicesList;
 }): EntryDraftResult {
   const durationDraft = parseDurationDraft(args.fields.duration);
   const durationIssue = durationFieldIssue(durationDraft);
