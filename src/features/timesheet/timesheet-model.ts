@@ -217,6 +217,51 @@ export function isTimerBusy(slot: TimerSlot): boolean {
   }
 }
 
+export type TimerControl =
+  | { kind: "play"; mode: "ready"; enabled: boolean }
+  | { kind: "stop"; mode: "ready"; enabled: boolean }
+  | { kind: "play"; mode: "pending" }
+  | { kind: "stop"; mode: "pending" };
+
+export function timerControl(args: {
+  entryId: TimeEntryId;
+  timer: TimerSlot;
+}): TimerControl {
+  const { entryId, timer } = args;
+  switch (timer.kind) {
+    case "idle":
+    case "failed":
+      return { kind: "play", mode: "ready", enabled: true };
+    case "starting":
+      if (timer.entryId === entryId) {
+        return { kind: "play", mode: "pending" };
+      }
+      return { kind: "play", mode: "ready", enabled: false };
+    case "running":
+      if (timer.timer.entryId === entryId) {
+        return { kind: "stop", mode: "ready", enabled: true };
+      }
+      return { kind: "play", mode: "ready", enabled: true };
+    case "stopping":
+      if (timer.timer.entryId === entryId) {
+        return { kind: "stop", mode: "pending" };
+      }
+      return { kind: "play", mode: "ready", enabled: false };
+    case "switching":
+      if (timer.to === entryId) {
+        return { kind: "play", mode: "pending" };
+      }
+      if (timer.from.entryId === entryId) {
+        return { kind: "stop", mode: "pending" };
+      }
+      return { kind: "play", mode: "ready", enabled: false };
+    default: {
+      const _exhaustive: never = timer;
+      return _exhaustive;
+    }
+  }
+}
+
 export function displayedMinutes(args: {
   logged: Minutes;
   entryId: TimeEntryId;
