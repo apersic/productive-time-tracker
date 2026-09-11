@@ -1,10 +1,13 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
+import type { ReactElement } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
 import { useAuth, type Credentials, type Person } from "../lib/auth";
 import { entryFieldsFrom } from "../features/timesheet";
 import { resolveEditEntryRoute, type EditEntryRoute } from "../features/edit";
 import { useEditEntry } from "../features/edit/hooks";
-import { EntryForm, Header } from "../ui";
+import { EntryForm, EntryFormSkeleton, Header, HeaderSkeleton } from "../ui";
+
+const FORM_PENDING_NAME = "Loading time entry";
 
 export function EditEntryPage() {
   const { session, logout } = useAuth();
@@ -14,7 +17,12 @@ export function EditEntryPage() {
 
   switch (session.kind) {
     case "booting":
-      return <Text>Loading</Text>;
+      return (
+        <Stack gap="6" w="full" px="4" pb="6">
+          <HeaderSkeleton title="Edit time entry" />
+          <EditEntryLoadingBody />
+        </Stack>
+      );
     case "anonymous":
     case "unavailable":
       return <Navigate to="/login" replace />;
@@ -41,6 +49,31 @@ export function EditEntryPage() {
       logout={onLogout}
       route={route}
     />
+  );
+}
+
+function EditEntryLoadingBody(): ReactElement {
+  const navigate = useNavigate();
+  return (
+    <Stack gap="4">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          void navigate("/", { replace: true });
+        }}
+      >
+        Back to home
+      </Button>
+      <Stack
+        gap="4"
+        role="status"
+        aria-busy="true"
+        aria-label={FORM_PENDING_NAME}
+      >
+        <EntryFormSkeleton />
+      </Stack>
+    </Stack>
   );
 }
 
@@ -78,7 +111,7 @@ function AuthenticatedEditEntry(props: {
       );
       break;
     case "loading":
-      body = <Text>Loading</Text>;
+      body = <EditEntryLoadingBody />;
       break;
     case "failed":
       body = (
