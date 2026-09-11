@@ -90,6 +90,10 @@ test("creating an entry posts the form and shows the row", async ({ page }) => {
     });
   });
   await openHome(page);
+  await expect(page.locator('input[name="duration"]')).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "New time entry" }),
+  ).toHaveCount(0);
   await page.locator('input[name="duration"]').fill("1:30");
   const editor = page.locator(".note-editor .ProseMirror");
   await editor.click();
@@ -361,4 +365,58 @@ test("deleting the last loaded row with more pages refills page 1", async ({
   await expect(page.getByText("Time entry deleted")).toBeVisible();
   await expect(page.locator('[data-entry-id="entry-1"]')).toHaveCount(0);
   await expect(page.locator('[data-entry-id="entry-2"]')).toBeVisible();
+});
+
+test.describe("mobile", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("the FAB opens a full-screen create modal", async ({ page }) => {
+    let posted: unknown;
+    await mockProductiveIdentity(page);
+    await mockServices(page, [
+      jsonApiService(),
+      jsonApiService("svc-2", "Design"),
+    ]);
+    await mockTimers(page);
+    await page.route("**/api/v2/time_entries**", async (route) => {
+      const request = route.request();
+      if (request.method() === "POST") {
+        posted = request.postDataJSON();
+        await route.fulfill({
+          ...jsonApiHeaders(),
+          status: 201,
+          body: JSON.stringify({
+            ...createdEntryResponse(posted),
+            included: [jsonApiService("svc-2", "Design")],
+          }),
+        });
+        return;
+      }
+      await route.fulfill({
+        ...jsonApiHeaders(),
+        body: JSON.stringify(jsonApiEmptyList()),
+      });
+    });
+    await openHome(page);
+    const fab = page.getByRole("button", { name: "New time entry" });
+    await expect(page.locator('input[name="duration"]')).toHaveCount(0);
+    await expect(fab).toBeInViewport();
+    await fab.click();
+    const dialog = page.getByRole("dialog", { name: "New time entry" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Close" })).toBeVisible();
+    await dialog.getByRole("combobox", { name: "Service" }).click();
+    await page.getByRole("option", { name: "Design" }).click();
+    await dialog.locator('input[name="duration"]').fill("1:30");
+    const editor = dialog.locator(".note-editor .ProseMirror");
+    await editor.click();
+    await editor.pressSequentially("Wrote tests");
+    await dialog.getByRole("button", { name: "Add entry" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText("Time entry added")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Design" })).toBeVisible();
+    await expect(page.locator('input[name="duration"]')).toHaveCount(0);
+    expect(jsonApiAttribute(posted, "time")).toBe(90);
+    expect(jsonApiRelationshipId(posted, "service")).toBe("svc-2");
+  });
 });
