@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  gate,
   jsonApiAttribute,
   jsonApiRelationshipId,
   jsonApiService,
@@ -111,6 +112,40 @@ test("PATCH 403 stays on edit without logging out", async ({ page }) => {
     page.getByRole("heading", { name: "Edit time entry" }),
   ).toBeVisible();
   expect(await storedCredentials(page)).not.toBeNull();
+});
+
+test("cold /edit/entry-1 shows a skeleton until the gate opens", async ({
+  page,
+}) => {
+  const load = gate();
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(
+    page,
+    () => ({
+      data: [jsonApiTimeEntry()],
+      included: [jsonApiService()],
+    }),
+    { gate: load },
+  );
+  await seedStoredCredentials(page);
+  await page.goto("/edit/entry-1");
+  await expect(
+    page.getByRole("status", { name: "Loading time entry" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Edit time entry" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Back to home" }),
+  ).toBeVisible();
+  await expect(page.locator('input[name="duration"]')).toHaveCount(0);
+  load.open();
+  await expect(page.locator('input[name="duration"]')).toHaveValue("01:30");
+  await expect(
+    page.getByRole("status", { name: "Loading time entry" }),
+  ).toHaveCount(0);
 });
 
 test("cold /edit/entry-1 prefills via GET filter", async ({ page }) => {

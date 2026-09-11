@@ -1,5 +1,7 @@
 export const HOME_CREATE_SPLIT = "lg" as const;
 
+export const HOME_GRID_COLUMNS = { base: "1fr", lg: "22rem 1fr" } as const;
+
 export type CreateLayout = "inline" | "overlay";
 
 export type CreateRequest = { kind: "closed" } | { kind: "open" };

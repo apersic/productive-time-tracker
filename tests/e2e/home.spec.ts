@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   createdEntryResponse,
+  gate,
   jsonApiAttribute,
   jsonApiHeaders,
   jsonApiEmptyList,
@@ -48,6 +49,108 @@ test("login opens home, survives refresh, and logout clears it", async ({
   expect(await storedCredentials(page)).toBeNull();
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
+});
+
+test("a delayed listing shows skeletons then the rows", async ({ page }) => {
+  const listing = gate();
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(
+    page,
+    () => ({
+      data: [jsonApiTimeEntry()],
+      included: [jsonApiService()],
+    }),
+    { gate: listing },
+  );
+  await openHome(page);
+  await expect(
+    page.getByRole("status", { name: "Loading time entries" }),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  await expect(page.getByText("Wrote tests")).toHaveCount(0);
+  listing.open();
+  await expect(page.getByText("Wrote tests")).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Loading time entries" }),
+  ).toHaveCount(0);
+});
+
+test("Play pending is only on the clicked row", async ({ page }) => {
+  const start = gate();
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page, { gate: start });
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry("entry-1"), jsonApiTimeEntry("entry-2")],
+    included: [jsonApiService()],
+  }));
+  await openHome(page);
+  const row1 = page.locator('[data-entry-id="entry-1"]');
+  const row2 = page.locator('[data-entry-id="entry-2"]');
+  await row1.getByRole("button", { name: "Play" }).click();
+  await expect(row1.getByRole("button", { name: "Play" })).toHaveAttribute(
+    "data-loading",
+  );
+  await expect(row2.getByRole("button", { name: "Play" })).toBeDisabled();
+  await expect(row2.getByRole("button", { name: "Play" })).not.toHaveAttribute(
+    "data-loading",
+  );
+  start.open();
+  await expect(row1.getByRole("button", { name: "Stop" })).toBeVisible();
+  await expect(row2.getByRole("button", { name: "Play" })).toBeEnabled();
+});
+
+test("Retry stays mounted and loading after click", async ({ page }) => {
+  const retryGate = gate();
+  let page2 = 0;
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+    links: {
+      next: "https://api.productive.io/api/v2/time_entries?page=2",
+    },
+  }));
+  await page.route("**/api/v2/time_entries**", async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+    const pageParam = new URL(route.request().url()).searchParams.get("page");
+    if (pageParam !== "2") {
+      await route.fallback();
+      return;
+    }
+    page2 += 1;
+    if (page2 === 1) {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/vnd.api+json",
+        body: "{}",
+      });
+      return;
+    }
+    await retryGate.wait();
+    await route.fulfill({
+      ...jsonApiHeaders(),
+      body: JSON.stringify({
+        data: [jsonApiTimeEntry("entry-2")],
+        included: [jsonApiService()],
+      }),
+    });
+  });
+  await openHome(page);
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await page.getByRole("button", { name: "Retry" }).click();
+  await expect(page.getByRole("button", { name: "Load more" })).toHaveAttribute(
+    "data-loading",
+  );
+  retryGate.open();
+  await expect(page.locator('[data-entry-id="entry-2"]')).toBeVisible();
 });
 
 test("a time entry shows the note, duration, and Play", async ({ page }) => {

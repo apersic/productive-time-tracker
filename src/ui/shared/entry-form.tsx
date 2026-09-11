@@ -6,10 +6,11 @@ import {
   InputGroup,
   Portal,
   Select,
+  Skeleton,
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useMemo, useState, type SubmitEvent } from "react";
+import { useMemo, useState, type ReactElement, type SubmitEvent } from "react";
 import {
   durationFieldIssue,
   FieldWarning,
@@ -37,6 +38,24 @@ import {
 } from "../../features/timesheet";
 import { Card } from "./card.tsx";
 import { NoteEditor } from "./note-editor.tsx";
+
+export function EntryFormSkeleton(): ReactElement {
+  return (
+    <Card aria-hidden>
+      <Stack gap="4">
+        <Field.Root>
+          <Field.Label>Duration</Field.Label>
+          <Skeleton height="10" borderRadius="md" />
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>Description</Field.Label>
+          <Skeleton height="24" borderRadius="md" />
+        </Field.Root>
+        <Skeleton height="10" borderRadius="md" />
+      </Stack>
+    </Card>
+  );
+}
 
 function spokenFromDuration(duration: string): string {
   const draft = parseDurationDraft(duration);

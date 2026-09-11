@@ -6,11 +6,14 @@ import {
   Heading,
   Menu,
   Portal,
+  Skeleton,
+  SkeletonCircle,
+  SkeletonText,
   Stack,
   Text,
 } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import {
   DeleteIcon,
   EditIcon,
@@ -22,22 +25,62 @@ import {
   displayedMinutes,
   entryTitle,
   isTimerBusy,
-  runningTimerFromSlot,
+  timerControl,
   type DayTimesheet,
   type EntryNote,
   type PageCursor,
   type TimeEntry,
   type TimeEntryId,
+  type TimerControl,
 } from "../../features/timesheet";
 import { formatCalendarDayLabel } from "../../lib/time/calendar-day.ts";
 import { formatHhMm } from "../../lib/time/duration.ts";
 import { Card } from "../shared";
+import { loadMoreControl } from "./load-more";
 import { NoteView } from "./note-view.tsx";
 
 type ListOverlay =
   | { kind: "closed" }
   | { kind: "confirm"; entryId: TimeEntryId; title: string }
   | { kind: "deleting"; entryId: TimeEntryId; title: string };
+
+const LIST_PENDING_NAME = "Loading time entries";
+const LIST_PLACEHOLDER_COUNT = 3;
+
+export function DayEntryListSkeleton(): ReactElement {
+  return (
+    <Stack
+      gap="3"
+      maxH="70vh"
+      overflowY="hidden"
+      role="status"
+      aria-busy="true"
+      aria-label={LIST_PENDING_NAME}
+    >
+      {Array.from({ length: LIST_PLACEHOLDER_COUNT }, (_, index) => (
+        <EntryRowSkeleton key={index} />
+      ))}
+    </Stack>
+  );
+}
+
+function EntryRowSkeleton(): ReactElement {
+  return (
+    <Card aria-hidden>
+      <Flex align="flex-start" justify="space-between" gap="4">
+        <Stack flex="1" gap="1" minW="0">
+          <SkeletonText noOfLines={1} />
+          <SkeletonText noOfLines={1} width="50%" />
+        </Stack>
+        <Flex align="center" justify="space-between" gap="4">
+          <Skeleton height="5" width="12" />
+          <SkeletonCircle size="8" />
+          <SkeletonCircle size="8" />
+        </Flex>
+      </Flex>
+    </Card>
+  );
+}
 
 function copyButtonVisible(timesheet: DayTimesheet): boolean {
   if (timesheet.entries.status !== "empty") {
@@ -216,9 +259,6 @@ function EntryRow(props: {
   onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
 }) {
-  const running = runningTimerFromSlot(props.timesheet.timer);
-  const isThisRunning = running?.entryId === props.entry.id;
-  const busy = isTimerBusy(props.timesheet.timer);
   const shown = displayedMinutes({
     logged: props.entry.logged,
     entryId: props.entry.id,
@@ -242,23 +282,14 @@ function EntryRow(props: {
           <Text fontFamily="mono" whiteSpace="nowrap">
             {formatHhMm(shown)}
           </Text>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            aria-label={isThisRunning ? "Stop" : "Play"}
-            disabled={busy}
-            onClick={() =>
-              isThisRunning ? props.onPause() : props.onPlay(props.entry.id)
-            }
-          >
-            <Box
-              color={isThisRunning ? "fg.error" : "green.600"}
-              display="inline-flex"
-            >
-              {isThisRunning ? <StopIcon /> : <PlayIcon />}
-            </Box>
-          </Button>
+          <TimerButton
+            control={timerControl({
+              entryId: props.entry.id,
+              timer: props.timesheet.timer,
+            })}
+            onPlay={() => props.onPlay(props.entry.id)}
+            onPause={props.onPause}
+          />
           <EntryMoreMenu
             entry={props.entry}
             timesheet={props.timesheet}
@@ -269,6 +300,99 @@ function EntryRow(props: {
       </Flex>
     </Card>
   );
+}
+
+function timerLabel(kind: TimerControl["kind"]): "Play" | "Stop" {
+  switch (kind) {
+    case "play":
+      return "Play";
+    case "stop":
+      return "Stop";
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function timerGlyph(kind: TimerControl["kind"]): ReactElement {
+  switch (kind) {
+    case "play":
+      return (
+        <Box color="green.600" display="inline-flex">
+          <PlayIcon />
+        </Box>
+      );
+    case "stop":
+      return (
+        <Box color="fg.error" display="inline-flex">
+          <StopIcon />
+        </Box>
+      );
+    default: {
+      const _exhaustive: never = kind;
+      return _exhaustive;
+    }
+  }
+}
+
+function TimerButton(props: {
+  control: TimerControl;
+  onPlay: () => void;
+  onPause: () => void;
+}): ReactElement {
+  const { control } = props;
+  switch (control.mode) {
+    case "pending":
+      return (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          aria-label={timerLabel(control.kind)}
+          loading
+        >
+          {timerGlyph(control.kind)}
+        </Button>
+      );
+    case "ready":
+      switch (control.kind) {
+        case "play":
+          return (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-label={timerLabel(control.kind)}
+              disabled={!control.enabled}
+              onClick={props.onPlay}
+            >
+              {timerGlyph(control.kind)}
+            </Button>
+          );
+        case "stop":
+          return (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-label={timerLabel(control.kind)}
+              disabled={!control.enabled}
+              onClick={props.onPause}
+            >
+              {timerGlyph(control.kind)}
+            </Button>
+          );
+        default: {
+          const _exhaustive: never = control;
+          return _exhaustive;
+        }
+      }
+    default: {
+      const _exhaustive: never = control;
+      return _exhaustive;
+    }
+  }
 }
 
 function ReadyList(props: {
@@ -360,6 +484,33 @@ function ReadyList(props: {
   );
 }
 
+function LoadMoreFooter(props: {
+  page: PageCursor;
+  onLoadMore: () => void;
+}): ReactElement | null {
+  const control = loadMoreControl(props.page);
+  if (!control.visible) {
+    return null;
+  }
+  return (
+    <Stack gap="2">
+      {control.error ? (
+        <Text color="fg.error" role="alert">
+          {control.error}
+        </Text>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        loading={control.pending}
+        onClick={props.onLoadMore}
+      >
+        {control.label}
+      </Button>
+    </Stack>
+  );
+}
+
 export function DayEntryList(props: {
   timesheet: DayTimesheet;
   now: number;
@@ -404,7 +555,7 @@ export function DayEntryList(props: {
   let body;
   switch (timesheet.entries.status) {
     case "loading":
-      body = <Text>Loading</Text>;
+      body = <DayEntryListSkeleton />;
       break;
     case "failed":
       body = (
@@ -452,20 +603,10 @@ export function DayEntryList(props: {
             onEdit={props.onEdit}
             onDelete={requestDelete}
           />
-          {timesheet.entries.page.kind === "moreFailed" ? (
-            <Stack gap="2">
-              <Text color="fg.error" role="alert">
-                {timesheet.entries.page.error.message}
-              </Text>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={props.onLoadMore}
-              >
-                Retry
-              </Button>
-            </Stack>
-          ) : null}
+          <LoadMoreFooter
+            page={timesheet.entries.page}
+            onLoadMore={props.onLoadMore}
+          />
         </Stack>
       );
       break;

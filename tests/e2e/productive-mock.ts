@@ -186,12 +186,28 @@ export async function mockServices(
   });
 }
 
+export type Gate = { wait: () => Promise<void>; open: () => void };
+
+export function gate(): Gate {
+  let release = (): void => {};
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return {
+    wait: () => ready,
+    open: () => {
+      release();
+    },
+  };
+}
+
 export async function mockTimers(
   page: Page,
   options?: {
     onStart?: (entryId: string) => void;
     onStop?: (timerId: string) => void;
     failStart?: boolean;
+    gate?: Gate;
   },
 ) {
   await page.route("**/api/v2/timers**", async (route) => {
@@ -209,6 +225,9 @@ export async function mockTimers(
           body: "{}",
         });
         return;
+      }
+      if (options?.gate) {
+        await options.gate.wait();
       }
       await route.fulfill({
         ...jsonApiHeaders(),
@@ -263,6 +282,7 @@ function timerIdFromStopUrl(url: string): string | undefined {
 export async function mockTimeEntries(
   page: Page,
   handler: (url: string) => unknown,
+  options?: { gate?: Gate },
 ) {
   await page.route("**/api/v2/time_entries**", async (route) => {
     if (
@@ -271,6 +291,9 @@ export async function mockTimeEntries(
     ) {
       await route.fallback();
       return;
+    }
+    if (options?.gate) {
+      await options.gate.wait();
     }
     await route.fulfill({
       ...jsonApiHeaders(),
@@ -369,5 +392,7 @@ export async function seedStoredCredentials(page: Page) {
 export async function openHome(page: Page) {
   await seedStoredCredentials(page);
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Ada Lovelace" }),
+  ).toBeVisible();
 }
