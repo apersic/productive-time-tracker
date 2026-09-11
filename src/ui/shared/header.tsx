@@ -1,17 +1,17 @@
 import {
   Button,
   Flex,
-  Heading,
   Menu,
   Portal,
   SkeletonCircle,
   Text,
 } from "@chakra-ui/react";
 import type { Person } from "../../lib/auth";
+import { PageHeading, type PageId } from "../../lib/document";
 import { LogOutIcon } from "../../lib/icons";
 import { personChip } from "./person-chip.ts";
 
-export function HeaderSkeleton(props: { title?: string }) {
+export function HeaderSkeleton(props: { page: PageId }) {
   return (
     <Flex
       justify="space-between"
@@ -22,18 +22,16 @@ export function HeaderSkeleton(props: { title?: string }) {
       borderColor="gray.200"
       py="4"
     >
-      <Heading as="h1" size="lg">
-        {props.title ?? "Home"}
-      </Heading>
+      <PageHeading page={props.page} />
       <SkeletonCircle size="10" aria-hidden />
     </Flex>
   );
 }
 
 export function Header(props: {
+  page: PageId;
   person: Person;
   logout: () => void;
-  title?: string;
 }) {
   const chip = personChip(props.person.displayName);
 
@@ -47,9 +45,7 @@ export function Header(props: {
       borderColor="gray.200"
       py="4"
     >
-      <Heading as="h1" size="lg">
-        {props.title ?? "Home"}
-      </Heading>
+      <PageHeading page={props.page} />
       <Flex gap="2" align="center">
         <Menu.Root
           positioning={{ placement: "bottom-end" }}

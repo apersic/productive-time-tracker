@@ -63,7 +63,7 @@ export function HomePage() {
 function HomeSkeleton(): ReactElement {
   return (
     <Stack gap="6" w="full" px="4" pb={{ base: "24", lg: "6" }}>
-      <HeaderSkeleton title="Home" />
+      <HeaderSkeleton page="home" />
       <Grid templateColumns={HOME_GRID_COLUMNS} gap="8">
         <Box hideBelow={HOME_CREATE_SPLIT}>
           <EntryFormSkeleton />
@@ -116,7 +116,7 @@ function AuthenticatedHome(props: {
 
   return (
     <Stack gap="6" w="full" px="4" pb={{ base: "24", lg: "6" }}>
-      <Header person={props.person} logout={props.logout} />
+      <Header page="home" person={props.person} logout={props.logout} />
       {timesheet.timer.kind === "failed" ? (
         <Text color="fg.error" role="alert">
           {timesheet.timer.error.message}

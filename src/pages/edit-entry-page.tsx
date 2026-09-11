@@ -19,7 +19,7 @@ export function EditEntryPage() {
     case "booting":
       return (
         <Stack gap="6" w="full" px="4" pb="6">
-          <HeaderSkeleton title="Edit time entry" />
+          <HeaderSkeleton page="editEntry" />
           <EditEntryLoadingBody />
         </Stack>
       );
@@ -165,11 +165,7 @@ function AuthenticatedEditEntry(props: {
 
   return (
     <Stack gap="6" w="full" px="4" pb="6">
-      <Header
-        title="Edit time entry"
-        person={props.person}
-        logout={props.logout}
-      />
+      <Header page="editEntry" person={props.person} logout={props.logout} />
       {body}
     </Stack>
   );
