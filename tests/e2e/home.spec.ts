@@ -114,7 +114,7 @@ test("creating an entry posts the form and shows the row", async ({ page }) => {
   await expect(editor).toHaveClass(/is-empty/);
 });
 
-test("Play posts a timer and Pause stops it", async ({ page }) => {
+test("Play posts a timer and Stop stops it", async ({ page }) => {
   let startedEntryId: string | undefined;
   let stoppedTimerId: string | undefined;
   await mockProductiveIdentity(page);
@@ -133,9 +133,9 @@ test("Play posts a timer and Pause stops it", async ({ page }) => {
   }));
   await openHome(page);
   await page.getByRole("button", { name: "Play" }).click();
-  await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
   expect(startedEntryId).toBe("entry-1");
-  await page.getByRole("button", { name: "Pause" }).click();
+  await page.getByRole("button", { name: "Stop" }).click();
   await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
   expect(stoppedTimerId).toBe("timer-1");
 });
@@ -232,23 +232,6 @@ test("Confirm deletes the row and shows a success toast", async ({ page }) => {
   ).toHaveCount(0);
 });
 
-function parseRgb(value: string) {
-  const match = value.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/);
-  if (
-    !match ||
-    match[1] === undefined ||
-    match[2] === undefined ||
-    match[3] === undefined
-  ) {
-    return undefined;
-  }
-  return {
-    r: Number(match[1]),
-    g: Number(match[2]),
-    b: Number(match[3]),
-  };
-}
-
 test("a 500 delete keeps the row and shows an error toast", async ({
   page,
 }) => {
@@ -321,11 +304,11 @@ test("deleting a running entry idles the timer", async ({ page }) => {
   await mockTimeEntryDelete(page);
   await openHome(page);
   await page.getByRole("button", { name: "Play" }).click();
-  await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
   await openEntryDeleteConfirm(page);
   await page.getByRole("button", { name: "Confirm" }).click();
   await expect(page.getByText("Time entry deleted")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Pause" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
 });
 
 test("deleting the last loaded row with more pages refills page 1", async ({

@@ -1,6 +1,14 @@
-import { Button, Flex, Heading, Menu, Portal, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Flex,
+  Heading,
+  Menu,
+  Portal,
+  Text,
+} from "@chakra-ui/react";
 import type { Person } from "../../lib/auth";
-import { LogOutIcon } from "../../lib/icons";
+import { LogOutIcon, StopIcon } from "../../lib/icons";
 import { personChip } from "./person-chip.ts";
 
 export function Header(props: {
@@ -29,11 +37,13 @@ export function Header(props: {
           <Button
             type="button"
             variant="outline"
-            aria-label="Pause"
+            aria-label="Stop"
             disabled={props.pauseSlot.disabled}
             onClick={props.pauseSlot.onPause}
           >
-            Pause
+            <Box color="fg.error" display="inline-flex">
+              <StopIcon />
+            </Box>
           </Button>
         ) : null}
         <Menu.Root
@@ -62,7 +72,7 @@ export function Header(props: {
               <Menu.Content minW="10rem">
                 <Menu.ItemGroup>
                   <Menu.ItemGroupLabel>{chip.label}</Menu.ItemGroupLabel>
-                  <Menu.Item value="logout" color="fg.error">
+                  <Menu.Item value="logout" color="fg.error" cursor="pointer">
                     <LogOutIcon />
                     Log out
                   </Menu.Item>

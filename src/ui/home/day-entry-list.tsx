@@ -11,7 +11,13 @@ import {
 } from "@chakra-ui/react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useRef, useState } from "react";
-import { DeleteIcon, EditIcon, MoreIcon } from "../../lib/icons";
+import {
+  DeleteIcon,
+  EditIcon,
+  MoreIcon,
+  PlayIcon,
+  StopIcon,
+} from "../../lib/icons";
 import {
   displayedMinutes,
   entryTitle,
@@ -123,13 +129,16 @@ function EntryMoreMenu(props: {
       <Portal>
         <Menu.Positioner>
           <Menu.Content minW="10rem">
-            <Menu.Item value="edit">
+            <Menu.Item value="edit" cursor="pointer">
               <EditIcon />
               Edit
             </Menu.Item>
             <Menu.Item
               value="delete"
               color="fg.error"
+              cursor={
+                isTimerBusy(props.timesheet.timer) ? "not-allowed" : "pointer"
+              }
               disabled={isTimerBusy(props.timesheet.timer)}
             >
               <DeleteIcon />
@@ -237,13 +246,18 @@ function EntryRow(props: {
             type="button"
             size="sm"
             variant="outline"
-            aria-label={isThisRunning ? "Pause" : "Play"}
+            aria-label={isThisRunning ? "Stop" : "Play"}
             disabled={busy}
             onClick={() =>
               isThisRunning ? props.onPause() : props.onPlay(props.entry.id)
             }
           >
-            {isThisRunning ? "Pause" : "Play"}
+            <Box
+              color={isThisRunning ? "fg.error" : "green.600"}
+              display="inline-flex"
+            >
+              {isThisRunning ? <StopIcon /> : <PlayIcon />}
+            </Box>
           </Button>
           <EntryMoreMenu
             entry={props.entry}
