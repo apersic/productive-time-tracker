@@ -91,7 +91,7 @@ function AuthenticatedHome(props: {
   const {
     timesheet,
     now,
-    services,
+    picker,
     selectDay,
     loadMore,
     play,
@@ -124,7 +124,7 @@ function AuthenticatedHome(props: {
       ) : null}
       <Grid templateColumns={HOME_GRID_COLUMNS} gap="8">
         <CreateEntrySurface
-          services={services}
+          picker={picker}
           blocked={timesheet.entries.status === "loading"}
           onCreate={addEntry}
         />

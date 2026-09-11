@@ -470,6 +470,110 @@ test("deleting the last loaded row with more pages refills page 1", async ({
   await expect(page.locator('[data-entry-id="entry-2"]')).toBeVisible();
 });
 
+function jsonApiCompanyTree() {
+  return {
+    services: [
+      {
+        id: "svc-1",
+        type: "services",
+        attributes: { name: "Development" },
+        relationships: { deal: { data: { type: "deals", id: "d1" } } },
+      },
+      {
+        id: "svc-2",
+        type: "services",
+        attributes: { name: "Design" },
+        relationships: { deal: { data: { type: "deals", id: "d2" } } },
+      },
+    ],
+    included: [
+      {
+        id: "d1",
+        type: "deals",
+        attributes: { name: "Deal A", suffix: "" },
+        relationships: {
+          project: { data: { type: "projects", id: "p1" } },
+          company: { data: { type: "companies", id: "c1" } },
+        },
+      },
+      {
+        id: "d2",
+        type: "deals",
+        attributes: { name: "Deal B", suffix: "" },
+        relationships: {
+          project: { data: { type: "projects", id: "p2" } },
+          company: { data: { type: "companies", id: "c2" } },
+        },
+      },
+      {
+        id: "p1",
+        type: "projects",
+        attributes: { name: "Project A" },
+        relationships: { company: { data: { type: "companies", id: "c1" } } },
+      },
+      {
+        id: "p2",
+        type: "projects",
+        attributes: { name: "Project B" },
+        relationships: { company: { data: { type: "companies", id: "c2" } } },
+      },
+      {
+        id: "c1",
+        type: "companies",
+        attributes: { name: "Company A [SAMPLE]" },
+      },
+      {
+        id: "c2",
+        type: "companies",
+        attributes: { name: "Company B [SAMPLE]" },
+      },
+    ],
+  };
+}
+
+test("opening the service list does not show a blank warning", async ({
+  page,
+}) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page, [
+    jsonApiService(),
+    jsonApiService("svc-2", "Design"),
+  ]);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => jsonApiEmptyList());
+  await openHome(page);
+  const combobox = page.getByRole("combobox", { name: "Service" });
+  await combobox.click();
+  await expect(page.getByRole("option", { name: "Design" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Can't be blank" }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.locator('input[name="duration"]').fill("1:30");
+  await page.getByRole("button", { name: "Add entry" }).click();
+  await expect(
+    page.getByRole("button", { name: "Can't be blank" }),
+  ).toBeVisible();
+});
+
+test("services group under expandable company trees", async ({ page }) => {
+  const tree = jsonApiCompanyTree();
+  await mockProductiveIdentity(page);
+  await mockServices(page, tree.services, tree.included);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => jsonApiEmptyList());
+  await openHome(page);
+  await page.getByRole("combobox", { name: "Service" }).click();
+  await expect(page.getByText("Company A [SAMPLE]")).toBeVisible();
+  await expect(page.getByText("Company B [SAMPLE]")).toBeVisible();
+  await expect(page.getByRole("option", { name: "Design" })).toHaveCount(0);
+  await page.getByRole("button", { name: /Deal B/ }).click();
+  await page.getByRole("option", { name: "Design" }).click();
+  await expect(page.getByRole("combobox", { name: "Service" })).toHaveText(
+    "Design",
+  );
+});
+
 test.describe("mobile", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

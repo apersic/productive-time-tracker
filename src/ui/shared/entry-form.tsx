@@ -1,16 +1,13 @@
 import {
   Button,
-  createListCollection,
   Field,
   Input,
   InputGroup,
-  Portal,
-  Select,
   Skeleton,
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useMemo, useState, type ReactElement, type SubmitEvent } from "react";
+import { useState, type ReactElement, type SubmitEvent } from "react";
 import {
   durationFieldIssue,
   FieldWarning,
@@ -18,10 +15,6 @@ import {
   presenceIssue,
   type FieldIssue,
 } from "../../lib/forms";
-import type {
-  ServicesList,
-  TrackableService,
-} from "../../providers/productive";
 import {
   emptySpokenDuration,
   formatHhMm,
@@ -30,14 +23,16 @@ import {
   type DurationDraft,
 } from "../../lib/time/duration.ts";
 import {
-  entryServiceOptions,
   parseEntryDraft,
-  parseServiceId,
   type EntryDraft,
   type EntryFields,
+  type ServicePicker,
+  type ServicesList,
+  type TrackableService,
 } from "../../features/timesheet";
 import { Card } from "./card.tsx";
 import { NoteEditor } from "./note-editor.tsx";
+import { ServiceField } from "./service-field.tsx";
 
 export function EntryFormSkeleton(): ReactElement {
   return (
@@ -73,10 +68,51 @@ function spokenFromDuration(duration: string): string {
   }
 }
 
+function showServiceSelect(availability: ServicesList): boolean {
+  switch (availability.status) {
+    case "many":
+      return true;
+    case "loading":
+    case "failed":
+    case "none":
+    case "one":
+      return false;
+    default: {
+      const _exhaustive: never = availability;
+      return _exhaustive;
+    }
+  }
+}
+
+function formDisabled(args: {
+  submitting: boolean;
+  blocked: boolean;
+  availability: ServicesList;
+  selected: TrackableService | undefined;
+}): boolean {
+  if (args.submitting || args.blocked) {
+    return true;
+  }
+  switch (args.availability.status) {
+    case "loading":
+    case "failed":
+      return true;
+    case "none":
+      return args.selected === undefined;
+    case "one":
+    case "many":
+      return false;
+    default: {
+      const _exhaustive: never = args.availability;
+      return _exhaustive;
+    }
+  }
+}
+
 export function EntryForm(props: {
   initial: EntryFields;
   submitLabel: string;
-  services: ServicesList;
+  picker: ServicePicker;
   submitting: boolean;
   blocked: boolean;
   error: string | undefined;
@@ -87,9 +123,6 @@ export function EntryForm(props: {
     spokenFromDuration(props.initial.duration),
   );
   const [note, setNote] = useState(props.initial.note);
-  const [selectedServiceId, setSelectedServiceId] = useState(
-    props.initial.service?.id ?? "",
-  );
   const [durationIssue, setDurationIssue] = useState<FieldIssue | undefined>(
     undefined,
   );
@@ -97,46 +130,28 @@ export function EntryForm(props: {
     undefined,
   );
 
-  const serviceOptions = entryServiceOptions({
-    services: props.services,
-    pinned: props.initial.service,
+  const availability = props.picker.availability;
+  const selectVisible = showServiceSelect(availability);
+  const disabled = formDisabled({
+    submitting: props.submitting,
+    blocked: props.blocked,
+    availability,
+    selected: props.picker.selected,
   });
-  const showServiceSelect = serviceOptions.length > 1;
 
-  const disabled =
-    props.submitting ||
-    props.blocked ||
-    props.services.status === "loading" ||
-    props.services.status === "failed" ||
-    (props.services.status === "none" && serviceOptions.length === 0);
-
-  function selectedService(): TrackableService | undefined {
-    const id = parseServiceId(selectedServiceId);
-    if (id) {
-      const fromOptions = serviceOptions.find((service) => service.id === id);
-      if (fromOptions) {
-        return fromOptions;
-      }
-    }
-    if (serviceOptions.length === 1) {
-      return serviceOptions[0];
-    }
-    return undefined;
+  function commitService(service: TrackableService | undefined): boolean {
+    const issue = presenceIssue(service?.id ?? "");
+    setServiceIssue(issue);
+    return issue === undefined;
   }
 
   function resetForm() {
     setDuration(props.initial.duration);
     setSpoken(spokenFromDuration(props.initial.duration));
     setNote(props.initial.note);
-    setSelectedServiceId(props.initial.service?.id ?? "");
     setDurationIssue(undefined);
     setServiceIssue(undefined);
-  }
-
-  function commitService(id: string): boolean {
-    const issue = presenceIssue(id);
-    setServiceIssue(issue);
-    return issue === undefined;
+    props.picker.reset();
   }
 
   function commitDuration(raw: string): {
@@ -173,17 +188,17 @@ export function EntryForm(props: {
     if (disabled) {
       return;
     }
-    if (showServiceSelect) {
-      commitService(selectedServiceId);
+    if (selectVisible) {
+      commitService(props.picker.selected);
     }
     const committed = commitDuration(duration);
     const parsed = parseEntryDraft({
       fields: {
         duration: committed.value,
-        service: selectedService(),
+        service: props.picker.selected,
         note,
       },
-      services: props.services,
+      availability,
     });
     if (!parsed.ok) {
       setDurationIssue(parsed.issues.duration);
@@ -200,28 +215,23 @@ export function EntryForm(props: {
     <form noValidate onSubmit={(event) => void onSubmit(event)}>
       <Card>
         <Stack gap="4">
-          {props.services.status === "none" ? (
+          {availability.status === "none" ? (
             <Text color="fg.error">
               No services are available for time tracking.
             </Text>
           ) : null}
-          {props.services.status === "failed" ? (
+          {availability.status === "failed" ? (
             <Text color="fg.error" role="alert">
-              {props.services.error.message}
+              {availability.error.message}
             </Text>
           ) : null}
-          {showServiceSelect ? (
+          {selectVisible ? (
             <ServiceField
-              services={serviceOptions}
-              selectedServiceId={selectedServiceId}
+              picker={props.picker}
               issue={serviceIssue}
               disabled={disabled}
-              onSelectedServiceIdChange={(id) => {
-                setSelectedServiceId(id);
-                setServiceIssue(undefined);
-              }}
-              onBlur={() => {
-                commitService(selectedServiceId);
+              onSelect={(service) => {
+                commitService(service);
               }}
             />
           ) : null}
@@ -273,66 +283,5 @@ export function EntryForm(props: {
         </Stack>
       </Card>
     </form>
-  );
-}
-
-function ServiceField(props: {
-  services: readonly TrackableService[];
-  selectedServiceId: string;
-  issue: FieldIssue | undefined;
-  disabled: boolean;
-  onSelectedServiceIdChange: (id: string) => void;
-  onBlur: () => void;
-}) {
-  const collection = useMemo(
-    () =>
-      createListCollection({
-        items: props.services.map((service) => ({
-          label: service.name || service.id,
-          value: service.id,
-        })),
-      }),
-    [props.services],
-  );
-
-  return (
-    <Field.Root required invalid={props.issue !== undefined}>
-      <Field.Label>Service</Field.Label>
-      <Select.Root
-        collection={collection}
-        value={props.selectedServiceId ? [props.selectedServiceId] : []}
-        onValueChange={(details) =>
-          props.onSelectedServiceIdChange(details.value[0] ?? "")
-        }
-        disabled={props.disabled}
-        width="full"
-        invalid={props.issue !== undefined}
-      >
-        <Select.HiddenSelect name="service" />
-        <Select.Control onBlur={props.onBlur}>
-          <Select.Trigger>
-            <Select.ValueText placeholder="Select a service" />
-          </Select.Trigger>
-          <Select.IndicatorGroup>
-            {props.issue ? (
-              <FieldWarning message={fieldIssueMessage(props.issue)} />
-            ) : null}
-            <Select.Indicator />
-          </Select.IndicatorGroup>
-        </Select.Control>
-        <Portal>
-          <Select.Positioner>
-            <Select.Content>
-              {collection.items.map((item) => (
-                <Select.Item item={item} key={item.value}>
-                  {item.label}
-                  <Select.ItemIndicator />
-                </Select.Item>
-              ))}
-            </Select.Content>
-          </Select.Positioner>
-        </Portal>
-      </Select.Root>
-    </Field.Root>
   );
 }

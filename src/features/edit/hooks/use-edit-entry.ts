@@ -2,14 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import type { Credentials, Person } from "../../../lib/auth";
 import { announce } from "../../../lib/notice";
-import {
-  fetchTimeEntry,
-  fetchTrackableServices,
-  updateTimeEntry,
-  type ServicesList,
-} from "../../../providers/productive";
+import { fetchTimeEntry, updateTimeEntry } from "../../../providers/productive";
+import { useServicePicker } from "../../timesheet/hooks/use-service-picker.ts";
 import type {
   EntryDraft,
+  PickerContext,
+  ServicePicker,
   TimeEntry,
   TimeEntryId,
   TimesheetError,
@@ -53,6 +51,23 @@ function routeEntryId(route: EditEntryRoute): TimeEntryId | undefined {
   }
 }
 
+function pickerContext(page: EditEntryPageState): PickerContext {
+  switch (page.kind) {
+    case "ready":
+    case "saving":
+      return { kind: "ready", day: page.entry.day, pinned: page.entry.service };
+    case "invalidId":
+    case "loading":
+    case "missing":
+    case "failed":
+      return { kind: "awaitingDay" };
+    default: {
+      const _exhaustive: never = page;
+      return _exhaustive;
+    }
+  }
+}
+
 export function useEditEntry(args: {
   credentials: Credentials;
   person: Person;
@@ -60,14 +75,13 @@ export function useEditEntry(args: {
   route: EditEntryRoute;
 }): {
   page: EditEntryPageState;
-  services: ServicesList;
+  picker: ServicePicker;
   save: (draft: EntryDraft) => Promise<boolean>;
 } {
   const navigate = useNavigate();
   const [page, setPage] = useState<EditEntryPageState>(() =>
     pageFromRoute(args.route),
   );
-  const [services, setServices] = useState<ServicesList>({ status: "loading" });
   const pageRef = useRef(page);
   const argsRef = useRef(args);
 
@@ -79,37 +93,14 @@ export function useEditEntry(args: {
     argsRef.current = args;
   }, [args]);
 
-  const entryId = routeEntryId(args.route);
+  const picker = useServicePicker({
+    credentials: args.credentials,
+    personId: args.person.id,
+    context: pickerContext(page),
+    onUnauthorized: args.logout,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    const { credentials, person } = argsRef.current;
-    void fetchTrackableServices({
-      credentials,
-      personId: person.id,
-    }).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (!result.ok) {
-        if (result.error.kind === "unauthorized") {
-          announce({ op: "sessionExpired" });
-          argsRef.current.logout();
-          return;
-        }
-        setServices({ status: "failed", error: result.error });
-        return;
-      }
-      setServices(result.list);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    args.person.id,
-    args.credentials.accessToken,
-    args.credentials.organizationId,
-  ]);
+  const entryId = routeEntryId(args.route);
 
   useEffect(() => {
     if (!entryId) {
@@ -199,5 +190,5 @@ export function useEditEntry(args: {
     [navigate],
   );
 
-  return { page, services, save };
+  return { page, picker, save };
 }

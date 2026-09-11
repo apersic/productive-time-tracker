@@ -84,7 +84,7 @@ function AuthenticatedEditEntry(props: {
   route: EditEntryRoute;
 }) {
   const navigate = useNavigate();
-  const { page, services, save } = useEditEntry({
+  const { page, picker, save } = useEditEntry({
     credentials: props.credentials,
     person: props.person,
     logout: props.logout,
@@ -148,7 +148,7 @@ function AuthenticatedEditEntry(props: {
             key={page.entry.id}
             initial={entryFieldsFrom(page.entry)}
             submitLabel="Save changes"
-            services={services}
+            picker={picker}
             submitting={page.kind === "saving"}
             blocked={false}
             error={undefined}

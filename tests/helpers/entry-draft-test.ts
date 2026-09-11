@@ -1,7 +1,6 @@
 import QUnit from "qunit";
 import {
   emptyNote,
-  entryServiceOptions,
   parseEntryDraft,
   parseServiceId,
 } from "../../src/features/timesheet";
@@ -32,7 +31,7 @@ QUnit.test("ready duration and one service yields a draft", (assert) => {
   assert.deepEqual(
     parseEntryDraft({
       fields: { duration: "1:30", service: undefined, note: emptyNote },
-      services: { status: "one", service: development },
+      availability: { status: "one", service: development },
     }),
     {
       ok: true,
@@ -49,7 +48,7 @@ QUnit.test("empty duration is a blank duration issue", (assert) => {
   assert.deepEqual(
     parseEntryDraft({
       fields: { duration: "", service: development, note: emptyNote },
-      services: { status: "one", service: development },
+      availability: { status: "one", service: development },
     }),
     { ok: false, issues: { duration: "blank" } },
   );
@@ -59,7 +58,7 @@ QUnit.test("24:00 is a tooLong duration issue", (assert) => {
   assert.deepEqual(
     parseEntryDraft({
       fields: { duration: "24:00", service: development, note: emptyNote },
-      services: { status: "one", service: development },
+      availability: { status: "one", service: development },
     }),
     { ok: false, issues: { duration: "tooLong" } },
   );
@@ -71,7 +70,7 @@ QUnit.test(
     assert.deepEqual(
       parseEntryDraft({
         fields: { duration: "1:30", service: undefined, note: emptyNote },
-        services: { status: "many", services: [development, design] },
+        availability: { status: "many" },
       }),
       { ok: false, issues: { service: "blank" } },
     );
@@ -84,7 +83,7 @@ QUnit.test(
     assert.deepEqual(
       parseEntryDraft({
         fields: { duration: "", service: undefined, note: emptyNote },
-        services: { status: "many", services: [development, design] },
+        availability: { status: "many" },
       }),
       { ok: false, issues: { duration: "blank", service: "blank" } },
     );
@@ -92,12 +91,12 @@ QUnit.test(
 );
 
 QUnit.test(
-  "fields.service is kept when it is not in the trackable list",
+  "fields.service is kept when it is not the auto-used service",
   (assert) => {
     assert.deepEqual(
       parseEntryDraft({
         fields: { duration: "1:30", service: design, note: emptyNote },
-        services: { status: "one", service: development },
+        availability: { status: "one", service: development },
       }),
       {
         ok: true,
@@ -112,12 +111,12 @@ QUnit.test(
 );
 
 QUnit.test(
-  "a pinned service still drafts when none are currently trackable",
+  "a selected service still drafts when none are currently trackable",
   (assert) => {
     assert.deepEqual(
       parseEntryDraft({
         fields: { duration: "1:30", service: development, note: emptyNote },
-        services: { status: "none" },
+        availability: { status: "none" },
       }),
       {
         ok: true,
@@ -130,25 +129,3 @@ QUnit.test(
     );
   },
 );
-
-QUnit.module("entryServiceOptions");
-
-QUnit.test("pins a service that is no longer trackable", (assert) => {
-  assert.deepEqual(
-    entryServiceOptions({
-      services: { status: "many", services: [development] },
-      pinned: design,
-    }),
-    [development, design],
-  );
-});
-
-QUnit.test("pins onto an empty trackable list", (assert) => {
-  assert.deepEqual(
-    entryServiceOptions({
-      services: { status: "none" },
-      pinned: development,
-    }),
-    [development],
-  );
-});
