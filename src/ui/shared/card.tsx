@@ -6,7 +6,7 @@ export function Card(props: BoxProps) {
       p="4"
       bg="bg"
       borderWidth="1px"
-      borderColor="gray.200"
+      borderColor="border"
       borderRadius="md"
       boxShadow="sm"
       {...props}

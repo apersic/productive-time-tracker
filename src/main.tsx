@@ -1,10 +1,11 @@
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
+import { ChakraProvider } from "@chakra-ui/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App.tsx";
 import { AuthProvider } from "./lib/auth";
 import { NoticeHost } from "./lib/notice";
+import { system } from "./lib/theme.ts";
 import "./styles/main.css";
 
 const root = document.getElementById("root");
@@ -14,7 +15,7 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <ChakraProvider value={defaultSystem}>
+    <ChakraProvider value={system}>
       <NoticeHost />
       <BrowserRouter>
         <AuthProvider>

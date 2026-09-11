@@ -1,6 +1,11 @@
 export const HOME_CREATE_SPLIT = "lg" as const;
 
-export const HOME_GRID_COLUMNS = { base: "1fr", lg: "22rem 1fr" } as const;
+export const ENTRY_FORM_WIDTH = "22rem";
+
+export const HOME_GRID_COLUMNS = {
+  base: "1fr",
+  lg: `${ENTRY_FORM_WIDTH} 1fr`,
+} as const;
 
 export type CreateLayout = "inline" | "overlay";
 

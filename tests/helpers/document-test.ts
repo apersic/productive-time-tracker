@@ -48,7 +48,7 @@ QUnit.test("shellHead crawler tags", (assert) => {
   );
   assert.equal(
     themeColor?.kind === "meta" ? themeColor.content : undefined,
-    "#171717",
+    "#FAF8F5",
   );
 
   const locale = tags.find(

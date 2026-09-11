@@ -5,6 +5,8 @@
  * Runtime never writes meta tags. PageHeading only assigns document.title.
  */
 
+import { PALETTE } from "../palette.ts";
+
 export type AssetPath = `/${string}`;
 
 export const SITE_NAME = "Productive Time Tracker";
@@ -14,7 +16,7 @@ export const SITE_DESCRIPTION =
 
 export const SITE_ROBOTS = "noindex, nofollow";
 
-export const SITE_THEME_COLOR = "#171717";
+export const SITE_THEME_COLOR = PALETTE.canvas;
 
 export const SITE_LOCALE = "en";
 

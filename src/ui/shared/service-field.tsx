@@ -165,7 +165,7 @@ export function ServiceField(props: {
             zIndex="popover"
             bg="bg"
             borderWidth="1px"
-            borderColor="gray.200"
+            borderColor="border"
             borderRadius="md"
             boxShadow="md"
             py="2"

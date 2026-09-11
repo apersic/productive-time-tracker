@@ -6,6 +6,7 @@ import { noteIdentity, type EntryNote } from "./entry-note.ts";
 export type TimeEntryId = string & { readonly __brand: "TimeEntryId" };
 export type ServiceId = string & { readonly __brand: "ServiceId" };
 export type TaskId = string & { readonly __brand: "TaskId" };
+export type ProjectId = string & { readonly __brand: "ProjectId" };
 export type TimerId = string & { readonly __brand: "TimerId" };
 
 export type TimesheetError = {
@@ -19,7 +20,13 @@ export type TimeEntry = {
   note: EntryNote;
   service: { id: ServiceId; name: string };
   task?: { id: TaskId; title: string };
+  project?: { id: ProjectId; name: string };
   logged: Minutes;
+};
+
+export type EntryListingCopy = {
+  title: string;
+  subtitle: string | undefined;
 };
 
 export type RunningTimer = {
@@ -144,12 +151,49 @@ export function parseTaskId(value: string): TaskId | undefined {
   return trimmed as TaskId;
 }
 
+export function parseProjectId(value: string): ProjectId | undefined {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+  return trimmed as ProjectId;
+}
+
 export function parseTimerId(value: string): TimerId | undefined {
   const trimmed = value.trim();
   if (trimmed.length === 0) {
     return undefined;
   }
   return trimmed as TimerId;
+}
+
+export function entryListingCopy(args: {
+  service: { name: string };
+  task?: { title: string };
+  project?: { name: string };
+}): EntryListingCopy {
+  const taskTitle = args.task?.title;
+  const projectName = args.project?.name;
+  const serviceName = args.service.name;
+  if (taskTitle !== undefined && taskTitle.length > 0) {
+    if (projectName !== undefined && projectName.length > 0) {
+      return {
+        title: taskTitle,
+        subtitle: `${projectName}: ${serviceName}`,
+      };
+    }
+    return {
+      title: taskTitle,
+      subtitle: serviceName.length > 0 ? serviceName : undefined,
+    };
+  }
+  return {
+    title: serviceName,
+    subtitle:
+      projectName !== undefined && projectName.length > 0
+        ? projectName
+        : undefined,
+  };
 }
 
 export function initialDayTimesheet(day: CalendarDay): DayTimesheet {
