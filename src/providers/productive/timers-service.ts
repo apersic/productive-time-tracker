@@ -1,5 +1,8 @@
-import type { Credentials, PersonId } from "../auth/session.ts";
-import { parseCalendarDay, type CalendarDay } from "../time/calendar-day.ts";
+import type { Credentials, PersonId } from "../../lib/auth/session.ts";
+import {
+  parseCalendarDay,
+  type CalendarDay,
+} from "../../lib/time/calendar-day.ts";
 import {
   parseTimeEntryId,
   parseTimerId,
@@ -8,7 +11,7 @@ import {
   type TimeEntryId,
   type TimerId,
   type TimesheetError,
-} from "../timesheet/day-timesheet.ts";
+} from "../../features/timesheet/timesheet-model.ts";
 import { productiveBaseUrl } from "./authenticate.ts";
 import {
   parseJsonApiDataList,

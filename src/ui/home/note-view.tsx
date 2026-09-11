@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Mark, Node as PMNode } from "prosemirror-model";
-import type { EntryNote } from "../../lib/timesheet/entry-note.ts";
+import type { EntryNote } from "../../features/timesheet";
 
 type PresentNote = Extract<EntryNote, { kind: "present" }>;
 

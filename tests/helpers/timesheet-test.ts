@@ -1,10 +1,9 @@
 import QUnit from "qunit";
+import { parseAccessToken, parseOrganizationId } from "../../src/lib/auth";
 import {
-  parseAccessToken,
-  parseOrganizationId,
-} from "../../src/lib/auth/session";
-import { productiveRequestUrl } from "../../src/lib/productive/json-api";
-import { deleteTimeEntry } from "../../src/lib/productive/time-entries";
+  deleteTimeEntry,
+  productiveRequestUrl,
+} from "../../src/providers/productive";
 import {
   alreadyCopied,
   applyFact,
@@ -20,16 +19,16 @@ import {
   noteSchema,
   parseEntryNote,
   parseServiceId,
+  parseTaskId,
   parseTimeEntryId,
   parseTimerId,
-  parseTaskId,
   reconstructTimerSlot,
   runningEntryVisible,
   serializeEntryNote,
   type DayTimesheet,
   type RunningTimer,
   type TimeEntry,
-} from "../../src/lib/timesheet";
+} from "../../src/features/timesheet";
 import { formatHhMm, parseCalendarDay, parseMinutes } from "../../src/lib/time";
 
 function day(value: string) {

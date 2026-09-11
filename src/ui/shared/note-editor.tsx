@@ -15,7 +15,7 @@ import {
   noteIdentity,
   noteSchema,
   type EntryNote,
-} from "../../lib/timesheet/entry-note.ts";
+} from "../../features/timesheet";
 
 const listItemType = noteSchema.nodes.list_item;
 const bulletListType = noteSchema.nodes.bullet_list;

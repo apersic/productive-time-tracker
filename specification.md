@@ -21,7 +21,7 @@ Auth is a discriminated `Session` in `src/lib/auth/session.ts`:
 
 Credentials are `{ organizationId, accessToken }`. They persist in `localStorage` under `productive-time-tracker.credentials` so a refresh keeps the user logged in. Restore clears that key only on HTTP 401 or 403. Network failures and invalid API payloads keep the stored token and send the user to login with an error. Log out removes that key and returns the session to `anonymous`.
 
-`src/lib/productive` is the only module that speaks JSON:API. It parses responses into domain types. UI code does not read `data.attributes`.
+`src/providers/productive` is the only module that speaks JSON:API. It parses responses into domain types. UI code does not read `data.attributes`.
 
 The current person is resolved at login. `GET /users` with a personal token returns that user. `GET /people?filter[email]=` then returns the person record used on time entries. The login form does not ask who you are.
 

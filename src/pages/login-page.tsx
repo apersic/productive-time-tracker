@@ -10,8 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { useState, type SubmitEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
-import { parseAccessToken, parseOrganizationId } from "../lib/auth/session.ts";
-import { useAuth } from "../lib/auth/use-auth.ts";
+import { parseAccessToken, parseOrganizationId, useAuth } from "../lib/auth";
 import {
   FieldWarning,
   fieldIssueMessage,
@@ -19,7 +18,7 @@ import {
   type FieldIssue,
 } from "../lib/forms";
 import { EyeIcon, EyeOffIcon } from "../lib/icons";
-import { Card } from "../lib/ui";
+import { Card } from "../ui";
 
 export function LoginPage() {
   const { session, login } = useAuth();

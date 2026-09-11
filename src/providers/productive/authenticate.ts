@@ -1,5 +1,5 @@
-import type { AuthenticateResult } from "../auth/restore-outcome.ts";
-import type { Credentials } from "../auth/session.ts";
+import type { AuthenticateResult } from "../../lib/auth/restore-outcome.ts";
+import type { Credentials } from "../../lib/auth/session.ts";
 import {
   currentPersonFromPayload,
   currentUserFromPayload,

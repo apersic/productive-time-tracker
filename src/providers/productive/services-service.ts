@@ -1,9 +1,9 @@
-import type { Credentials, PersonId } from "../auth/session.ts";
+import type { Credentials, PersonId } from "../../lib/auth/session.ts";
 import {
   parseServiceId,
   type ServiceId,
   type TimesheetError,
-} from "../timesheet/day-timesheet.ts";
+} from "../../features/timesheet/timesheet-model.ts";
 import { productiveBaseUrl } from "./authenticate.ts";
 import {
   parseJsonApiDataList,

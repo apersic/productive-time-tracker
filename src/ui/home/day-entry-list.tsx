@@ -14,17 +14,18 @@ import { useEffect, useRef, useState } from "react";
 import { DeleteIcon, EditIcon, MoreIcon } from "../../lib/icons";
 import {
   displayedMinutes,
+  entryTitle,
   isTimerBusy,
   runningTimerFromSlot,
   type DayTimesheet,
+  type EntryNote,
   type PageCursor,
   type TimeEntry,
   type TimeEntryId,
-} from "../../lib/timesheet/day-timesheet.ts";
-import { entryTitle, type EntryNote } from "../../lib/timesheet/entry-note.ts";
+} from "../../features/timesheet";
 import { formatCalendarDayLabel } from "../../lib/time/calendar-day.ts";
 import { formatHhMm } from "../../lib/time/duration.ts";
-import { Card } from "../../lib/ui";
+import { Card } from "../shared";
 import { NoteView } from "./note-view.tsx";
 
 type ListOverlay =

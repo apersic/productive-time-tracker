@@ -1,6 +1,9 @@
-import type { Credentials, PersonId } from "../auth/session.ts";
-import { parseCalendarDay, type CalendarDay } from "../time/calendar-day.ts";
-import { parseMinutes } from "../time/duration.ts";
+import type { Credentials, PersonId } from "../../lib/auth/session.ts";
+import {
+  parseCalendarDay,
+  type CalendarDay,
+} from "../../lib/time/calendar-day.ts";
+import { parseMinutes } from "../../lib/time/duration.ts";
 import {
   parseServiceId,
   parseTaskId,
@@ -11,13 +14,13 @@ import {
   type TimeEntry,
   type TimeEntryId,
   type TimesheetError,
-} from "../timesheet/day-timesheet.ts";
-import type { EntryDraft } from "../timesheet/entry-draft.ts";
+} from "../../features/timesheet/timesheet-model.ts";
+import type { EntryDraft } from "../../features/timesheet/entry-draft.ts";
 import {
   parseEntryNote,
   serializeEntryNote,
   type EntryNote,
-} from "../timesheet/entry-note.ts";
+} from "../../features/timesheet/entry-note.ts";
 import { productiveBaseUrl } from "./authenticate.ts";
 import {
   parseJsonApiDataList,

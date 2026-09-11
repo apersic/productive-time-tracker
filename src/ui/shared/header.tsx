@@ -1,9 +1,9 @@
 import { Button, Flex, Heading, Menu, Portal, Text } from "@chakra-ui/react";
-import type { Person } from "../../lib/auth/session.ts";
+import type { Person } from "../../lib/auth";
 import { LogOutIcon } from "../../lib/icons";
 import { personChip } from "./person-chip.ts";
 
-export function HomeHeader(props: {
+export function Header(props: {
   person: Person;
   logout: () => void;
   title?: string;

@@ -1,22 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import type { Credentials, Person } from "../../lib/auth/session.ts";
-import { announce } from "../../lib/notice";
-import {
-  fetchTrackableServices,
-  type ServicesList,
-} from "../../lib/productive/services.ts";
+import type { Credentials, Person } from "../../../lib/auth";
+import { announce } from "../../../lib/notice";
 import {
   fetchTimeEntry,
+  fetchTrackableServices,
   updateTimeEntry,
-} from "../../lib/productive/time-entries.ts";
-import type { EntryDraft } from "../../lib/timesheet/entry-draft.ts";
+  type ServicesList,
+} from "../../../providers/productive";
 import type {
+  EntryDraft,
   TimeEntry,
   TimeEntryId,
   TimesheetError,
-} from "../../lib/timesheet/day-timesheet.ts";
-import { homeReturnState, type EditEntryRoute } from "../edit-entry-route.ts";
+} from "../../timesheet";
+import { homeReturnState, type EditEntryRoute } from "..";
 
 export type EditEntryPageState =
   | { kind: "invalidId" }

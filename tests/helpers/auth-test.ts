@@ -1,26 +1,22 @@
 import QUnit from "qunit";
 import {
   clearCredentials,
-  loadCredentials,
-  parseStoredCredentials,
-  saveCredentials,
-} from "../../src/lib/auth/credentials-storage";
-import { restoreOutcome } from "../../src/lib/auth/restore-outcome";
-import {
   displayNameFromParts,
+  loadCredentials,
   parseAccessToken,
   parseOrganizationId,
   parsePersonId,
-} from "../../src/lib/auth/session";
+  parseStoredCredentials,
+  restoreOutcome,
+  saveCredentials,
+} from "../../src/lib/auth";
 import {
   currentPersonFromPayload,
   currentUserFromPayload,
-} from "../../src/lib/productive/identity";
-import {
   parseJsonApiDataList,
   parseJsonApiResource,
   uniqueJsonApiResource,
-} from "../../src/lib/productive/json-api";
+} from "../../src/providers/productive";
 
 const STORAGE_KEY = "productive-time-tracker.credentials";
 

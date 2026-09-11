@@ -2,7 +2,7 @@ import {
   formatCalendarDayLabel,
   type CalendarDay,
 } from "../time/calendar-day.ts";
-import type { TimesheetError } from "../timesheet/day-timesheet.ts";
+import type { TimesheetError } from "../../features/timesheet/timesheet-model.ts";
 
 export type Write =
   | { op: "createEntry"; result: WriteResult }

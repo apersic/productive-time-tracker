@@ -5,7 +5,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { authenticate } from "../productive/authenticate.ts";
+import { authenticate } from "../../providers/productive/authenticate.ts";
 import {
   clearCredentials,
   loadCredentials,

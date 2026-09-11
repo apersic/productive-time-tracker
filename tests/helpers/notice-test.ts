@@ -1,7 +1,7 @@
 import QUnit from "qunit";
 import { copyForNotice, noticeFromWrite } from "../../src/lib/notice/notice";
 import { formatCalendarDayLabel, parseCalendarDay } from "../../src/lib/time";
-import type { TimesheetError } from "../../src/lib/timesheet/day-timesheet";
+import type { TimesheetError } from "../../src/features/timesheet";
 
 function day(value: string) {
   const parsed = parseCalendarDay(value);

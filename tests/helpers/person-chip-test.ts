@@ -1,5 +1,5 @@
 import QUnit from "qunit";
-import { personChip } from "../../src/pages/home/person-chip";
+import { personChip } from "../../src/ui";
 
 QUnit.module("personChip");
 

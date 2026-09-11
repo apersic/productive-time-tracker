@@ -4,7 +4,7 @@ import {
   parseJsonApiLinks,
   parseRelationshipId,
   readNumberAttribute,
-} from "../../src/lib/productive/json-api";
+} from "../../src/providers/productive";
 import {
   formatHhMm,
   formatSpokenDuration,
