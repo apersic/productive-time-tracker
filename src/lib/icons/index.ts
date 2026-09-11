@@ -5,4 +5,6 @@ export { default as EyeOffIcon } from "./eye-off-icon.tsx";
 export { default as LogOutIcon } from "./log-out-icon.tsx";
 export { default as MoreIcon } from "./more-icon.tsx";
 export { default as PlayIcon } from "./play-icon.tsx";
+export { default as PlusIcon } from "./plus-icon.tsx";
 export { default as StopIcon } from "./stop-icon.tsx";
+export { default as XIcon } from "./x-icon.tsx";
