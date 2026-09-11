@@ -1,21 +1,12 @@
-import {
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Menu,
-  Portal,
-  Text,
-} from "@chakra-ui/react";
+import { Button, Flex, Heading, Menu, Portal, Text } from "@chakra-ui/react";
 import type { Person } from "../../lib/auth";
-import { LogOutIcon, StopIcon } from "../../lib/icons";
+import { LogOutIcon } from "../../lib/icons";
 import { personChip } from "./person-chip.ts";
 
 export function Header(props: {
   person: Person;
   logout: () => void;
   title?: string;
-  pauseSlot?: { disabled: boolean; onPause: () => void };
 }) {
   const chip = personChip(props.person.displayName);
 
@@ -33,19 +24,6 @@ export function Header(props: {
         {props.title ?? "Home"}
       </Heading>
       <Flex gap="2" align="center">
-        {props.pauseSlot ? (
-          <Button
-            type="button"
-            variant="outline"
-            aria-label="Stop"
-            disabled={props.pauseSlot.disabled}
-            onClick={props.pauseSlot.onPause}
-          >
-            <Box color="fg.error" display="inline-flex">
-              <StopIcon />
-            </Box>
-          </Button>
-        ) : null}
         <Menu.Root
           positioning={{ placement: "bottom-end" }}
           onSelect={(details) => {
