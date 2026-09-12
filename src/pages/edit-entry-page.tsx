@@ -10,7 +10,7 @@ import {
 import { pageHeading } from "../lib/document";
 import { entryFieldsFrom } from "../features/timesheet";
 import { resolveEditEntryRoute, type EditEntryRoute } from "../features/edit";
-import { useEditEntry } from "../features/edit/hooks";
+import { dayMoved, useEditEntry } from "../features/edit/hooks";
 import {
   BackHomeLink,
   ENTRY_FORM_WIDTH,
@@ -118,13 +118,14 @@ function AuthenticatedEditEntry(props: {
   logout: (args?: LogoutArgs) => void;
   route: EditEntryRoute;
 }) {
-  const { page, picker, save } = useEditEntry({
+  const { page, picker, save, selectDay } = useEditEntry({
     credentials: props.credentials,
     person: props.person,
     logout: props.logout,
     route: props.route,
   });
-  const [dirty, setDirty] = useState(false);
+  const [fieldsDirty, setFieldsDirty] = useState(false);
+  const dirty = fieldsDirty || dayMoved(page);
   useDiscardPrompt(dirty);
 
   let body;
@@ -155,17 +156,18 @@ function AuthenticatedEditEntry(props: {
     case "saving":
       body = (
         <Stack gap={4}>
-          <BackHomeLink day={page.entry.day} dirty={dirty} />
+          <BackHomeLink day={page.session.entry.day} dirty={dirty} />
           <EntryForm
-            key={page.entry.id}
-            initial={entryFieldsFrom(page.entry)}
+            key={page.session.entry.id}
+            initial={entryFieldsFrom(page.session.entry)}
+            day={{ value: page.session.day, select: selectDay }}
             submitLabel="Save changes"
             picker={picker}
             submitting={page.kind === "saving"}
             blocked={false}
             error={undefined}
             onSubmit={save}
-            onDirtyChange={setDirty}
+            onDirtyChange={setFieldsDirty}
           />
         </Stack>
       );

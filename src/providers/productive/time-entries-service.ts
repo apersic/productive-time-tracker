@@ -355,7 +355,8 @@ export async function createTimeEntry(args: {
 export async function updateTimeEntry(args: {
   credentials: Credentials;
   personId: PersonId;
-  entry: TimeEntry;
+  entry: { id: TimeEntryId; task?: TimeEntry["task"] };
+  day: CalendarDay;
   draft: EntryDraft;
 }): Promise<
   { ok: true; entry: TimeEntry } | { ok: false; error: TimesheetError }
@@ -369,7 +370,7 @@ export async function updateTimeEntry(args: {
         type: "time_entries",
         id: args.entry.id,
         attributes: {
-          date: args.entry.day,
+          date: args.day,
           time: args.draft.logged,
           note: serializeEntryNote(args.draft.note),
         },

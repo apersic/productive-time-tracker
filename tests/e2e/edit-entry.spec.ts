@@ -54,7 +54,9 @@ test("saving patches the entry and returns home with a toast", async ({
   await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
-  await page.locator('input[name="duration"]').fill("2:00");
+  const duration = page.locator('input[name="duration"]');
+  await expect(duration).toHaveValue("01:30");
+  await duration.fill("2:00");
   const editor = page.locator(".note-editor .ProseMirror");
   await editor.click();
   await editor.press("Control+A");
@@ -127,6 +129,126 @@ test("cold edit loads by id and unknown ids are not found", async ({
   await expect(page.getByText("This time entry was not found.")).toBeVisible();
 });
 
+test("create form has no Date field", async ({ page }) => {
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => ({ data: [] }));
+  await openHome(page);
+  const createForm = page.locator("form");
+  await expect(createForm.getByLabel("Date")).toHaveCount(0);
+  await expect(createForm.getByRole("textbox", { name: "Date" })).toHaveCount(
+    0,
+  );
+});
+
+test("saving a moved date patches that day and returns home", async ({
+  page,
+}) => {
+  let patched: unknown;
+  let listing = {
+    data: [jsonApiTimeEntry("entry-1", { date: "2026-03-10", task })],
+    included: [jsonApiService(), jsonApiTask()],
+  };
+  await mockEditListing(page, () => listing);
+  await mockTimeEntryUpdate(page, (id, body) => {
+    patched = body;
+    const response = updatedEntryResponse(id, body);
+    listing = {
+      data: [response.data],
+      included: response.included,
+    };
+    return { status: 200, body: response };
+  });
+  await openHome(page);
+  await page.getByRole("button", { name: /More actions for/ }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await expect(page).toHaveURL(/\/edit\/entry-1/);
+  const firstLabel = page.locator("form label").first();
+  await expect(firstLabel).toHaveText("Date");
+  await page.getByRole("button", { name: "Open calendar" }).click();
+  await expect(
+    page.getByRole("application", { name: "calendar" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /March 15, 2026/ }).click();
+  await expect(
+    page.getByRole("button", { name: "Save changes" }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL("/");
+  expect(jsonApiAttribute(patched, "date")).toBe("2026-03-15");
+});
+
+test("changing service then date keeps the picked service", async ({
+  page,
+}) => {
+  let patched: unknown;
+  let listing = {
+    data: [jsonApiTimeEntry("entry-1", { date: "2026-03-10", task })],
+    included: [jsonApiService(), jsonApiTask()],
+  };
+  await mockProductiveIdentity(page);
+  await mockServices(page, [
+    jsonApiService(),
+    jsonApiService("svc-2", "Design"),
+  ]);
+  await mockTimers(page);
+  await mockTimeEntries(page, () => listing);
+  await mockTimeEntryUpdate(page, (id, body) => {
+    patched = body;
+    const response = updatedEntryResponse(id, body);
+    listing = {
+      data: [response.data],
+      included: response.included,
+    };
+    return { status: 200, body: response };
+  });
+  await openHome(page);
+  await page.getByRole("button", { name: /More actions for/ }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await expect(page).toHaveURL(/\/edit\/entry-1/);
+  await page.getByRole("combobox", { name: "Service" }).click();
+  await page.getByRole("option", { name: "Design" }).click();
+  await expect(page.getByRole("combobox", { name: "Service" })).toHaveText(
+    "Design",
+  );
+  await page.getByRole("button", { name: "Open calendar" }).click();
+  await expect(
+    page.getByRole("application", { name: "calendar" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /March 15, 2026/ }).click();
+  await expect(page.getByRole("combobox", { name: "Service" })).toHaveText(
+    "Design",
+  );
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page).toHaveURL("/");
+  expect(jsonApiAttribute(patched, "date")).toBe("2026-03-15");
+  expect(jsonApiRelationshipId(patched, "service")).toBe("svc-2");
+});
+
+test("changing only the date asks before discarding", async ({ page }) => {
+  await mockEditListing(page, () => ({
+    data: [jsonApiTimeEntry("entry-1", { date: "2026-03-10" })],
+    included: [jsonApiService()],
+  }));
+  await openHome(page);
+  await page.getByRole("button", { name: /More actions for/ }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await expect(page).toHaveURL(/\/edit\/entry-1/);
+  await expect(page.getByRole("textbox", { name: "Date" })).toHaveValue(
+    "March 10, 2026",
+  );
+  await page.getByRole("button", { name: "Open calendar" }).click();
+  await expect(
+    page.getByRole("application", { name: "calendar" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /March 15, 2026/ }).click();
+  await page.getByRole("link", { name: "Back to home" }).click();
+  await expect(
+    page.getByRole("alertdialog", { name: "Discard unsaved changes?" }),
+  ).toBeVisible();
+});
+
 test("Back to home asks before discarding edits", async ({ page }) => {
   await mockEditListing(page, () => ({
     data: [jsonApiTimeEntry()],
@@ -136,7 +258,9 @@ test("Back to home asks before discarding edits", async ({ page }) => {
   await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
-  await page.locator('input[name="duration"]').fill("2:00");
+  const duration = page.locator('input[name="duration"]');
+  await expect(duration).toHaveValue("01:30");
+  await duration.fill("2:00");
   await page.getByRole("link", { name: "Back to home" }).click();
   const dialog = page.getByRole("alertdialog", {
     name: "Discard unsaved changes?",

@@ -179,6 +179,7 @@ QUnit.module("updateTimeEntry", (hooks) => {
       credentials: credentials(),
       personId: personId(),
       entry: sampleEntry,
+      day: sampleEntry.day,
       draft: sampleDraft,
     });
     assert.deepEqual(result, {
@@ -199,6 +200,7 @@ QUnit.module("updateTimeEntry", (hooks) => {
       credentials: credentials(),
       personId: personId(),
       entry: sampleEntry,
+      day: sampleEntry.day,
       draft: sampleDraft,
     });
     assert.deepEqual(result, {

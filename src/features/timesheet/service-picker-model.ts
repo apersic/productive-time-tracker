@@ -414,7 +414,9 @@ function reduceContextChanged(
     input: "",
     search: { kind: "off" },
     expansion: { mode: "collapsed", opened: new Set() },
-    selection: context.kind === "ready" ? context.pinned : undefined,
+    selection:
+      state.selection ??
+      (context.kind === "ready" ? context.pinned : undefined),
     searchGeneration: state.searchGeneration + 1,
   };
 }

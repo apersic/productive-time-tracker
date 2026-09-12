@@ -36,10 +36,10 @@ Chakra UI owns the visible controls. A skip link is the first focusable control 
 - **Login form.** Organization ID and API token. Submit authenticates against Productive. Failure shows an error. Success stores credentials and opens home.
 - **Home.** The person name is a menu that contains **Log out**. A day control defaults to today in the browser timezone. Wide layouts show the create form beside the list. Narrow layouts hide that form behind a **New time entry** button that opens a full-screen dialog.
 - **Entry list.** Rows for the selected day. Each row shows duration, service name, optional project, optional task title, and the note. Play and stop drive Productive timers. More actions offer edit and delete. An empty day can copy tasks from the previous day. Further pages load by scrolling `links.next`.
-- **Entry form.** Duration, a service picker, and a ProseMirror note. No person field. No date field. Home's day control is the date for creates. Edit keeps the entry's existing date.
+- **Entry form.** Duration, a service picker, and a ProseMirror note. No person field. Create has no date field. Home's day control is the date for creates. Edit has a Date field first.
 - **Service picker.** A combobox that expands into company, project, deal, and section groups. Search calls Productive with `filter[query]`. One trackable service is selected automatically. A service that is already on an entry stays visible even when it is no longer bookable that day.
 - **Delete action.** A confirm step before `DELETE`.
-- **Edit.** `/edit/:entryId` reuses the same form. Save `PATCH`es duration, note, and service. Unsaved navigation warns in the browser.
+- **Edit.** `/edit/:entryId` reuses the same form. Save `PATCH`es duration, note, service, and date. Unsaved navigation warns in the browser.
 
 ## How the app talks to the Productive API
 
@@ -60,7 +60,7 @@ Time entries:
 
 - List the day with `GET /time_entries` filtered to the current person, drafts included, and that calendar date. Include `service,task,service.deal.project`. Follow `links.next`.
 - Create with `POST /time_entries`. `person_id` is the authenticated person. Duration is `time` in minutes. Day is `date`. Description is `note` HTML. `service_id` is required.
-- Edit with `PATCH /time_entries/{id}` for `time`, `note`, and `service`. The date is not edited.
+- Edit with `PATCH /time_entries/{id}` for `time`, `note`, `service`, and `date`. The date comes from the form Date field.
 - Delete with `DELETE /time_entries/{id}`.
 
 Services:
@@ -90,7 +90,7 @@ Timers use Productive's timer resources to start, stop, and recover a running ti
 
 ## Assumptions
 
-1. **The given day is user-selected.** The date control defaults to today and can move. Create uses that day. Edit keeps the entry's day.
+1. **The given day is user-selected.** The date control defaults to today and can move. Create uses the selected listing day. Edit can move the entry to another day.
 2. **Description is `note`.** Productive has no separate description field on a time entry. The editor stores HTML.
 3. **Duration is minutes on the wire.** The form can show hours and minutes. Storage and API use `time`.
 4. **A service is required to create.** Productive requires `service_id` on `POST /time_entries`. The picker loads bookable services for the selected day.
@@ -98,5 +98,5 @@ Timers use Productive's timer resources to start, stop, and recover a running ti
 6. **Current person is the people row whose email matches the current user.** `filter[email]` must return exactly one `people` resource.
 7. **Pagination follows `links.next`.** The list does not show a Load more button when more pages exist. Scrolling fetches the next page.
 8. **Local timezone for today.** `date` sent to Productive is a calendar day in the browser timezone, not UTC.
-9. **Edit can change duration, service, and description.** Person and date stay as they were.
+9. **Edit can change duration, service, description, and date.** Person stays as it was.
 10. **Delete is immediate after confirm.**
