@@ -1,17 +1,27 @@
-import { Button, Dialog, Portal, useBreakpointValue } from "@chakra-ui/react";
-import { useState } from "react";
+import {
+  Box,
+  Button,
+  Dialog,
+  Heading,
+  Portal,
+  Stack,
+  useBreakpointValue,
+} from "@chakra-ui/react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   blankEntryFields,
   type EntryDraft,
   type ServicePicker,
 } from "../../features/timesheet";
+import { usePrefersReducedMotion } from "../../lib/hooks";
 import { PlusIcon, XIcon } from "../../lib/icons";
 import { EntryForm } from "../shared";
 import {
   createSurface,
   dismissable,
   entryFormStatus,
+  HOME_CREATE_PORTAL_ID,
   HOME_CREATE_SPLIT,
   type CreateLayout,
   type CreateRequest,
@@ -36,8 +46,12 @@ export function CreateEntrySurface(props: {
   const layout = useCreateLayout();
   const [request, setRequest] = useState<CreateRequest>({ kind: "closed" });
   const [status, setStatus] = useState<CreateStatus>({ kind: "editing" });
+  const [portal, setPortal] = useState<HTMLElement | null>(null);
 
-  // Drop a stale open request while inline so a later shrink does not reopen it.
+  useEffect(() => {
+    setPortal(document.getElementById(HOME_CREATE_PORTAL_ID));
+  }, []);
+
   if (layout === "inline" && request.kind === "open") {
     setRequest({ kind: "closed" });
   }
@@ -74,26 +88,22 @@ export function CreateEntrySurface(props: {
           picker={props.picker}
           blocked={props.blocked}
           onSubmit={submit}
+          heading="New time entry"
         />
       );
-    case "trigger":
-      return createPortal(
-        <CreateEntryFab blocked={props.blocked} onOpen={open} />,
-        document.body,
-      );
+    case "trigger": {
+      const fab = <CreateEntryFab blocked={props.blocked} onOpen={open} />;
+      return portal ? createPortal(fab, portal) : fab;
+    }
     case "modal":
-      return createPortal(
-        <>
-          <CreateEntryFab blocked={props.blocked} onOpen={open} />
-          <CreateEntryDialog
-            status={surface.status}
-            picker={props.picker}
-            blocked={props.blocked}
-            onClose={close}
-            onSubmit={submit}
-          />
-        </>,
-        document.body,
+      return (
+        <CreateEntryDialog
+          status={surface.status}
+          picker={props.picker}
+          blocked={props.blocked}
+          onClose={close}
+          onSubmit={submit}
+        />
       );
     default: {
       const _exhaustive: never = surface;
@@ -107,25 +117,36 @@ function CreateEntryForm(props: {
   picker: ServicePicker;
   blocked: boolean;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
+  heading?: string;
 }) {
   const { submitting, error } = entryFormStatus(props.status);
   return (
-    <EntryForm
-      initial={blankEntryFields()}
-      submitLabel="Add entry"
-      picker={props.picker}
-      submitting={submitting}
-      blocked={props.blocked}
-      error={error}
-      onSubmit={props.onSubmit}
-    />
+    <Stack gap="3">
+      {props.heading ? (
+        <Heading as="h2" size="md">
+          {props.heading}
+        </Heading>
+      ) : null}
+      <EntryForm
+        initial={blankEntryFields()}
+        submitLabel="Add entry"
+        picker={props.picker}
+        submitting={submitting}
+        blocked={props.blocked}
+        error={error}
+        onSubmit={props.onSubmit}
+      />
+    </Stack>
   );
 }
 
 function CreateEntryFab(props: { blocked: boolean; onOpen: () => void }) {
   return (
-    // body is flex + h-full. Chakra Button is position:relative. Fixed has to live here.
-    <div className="fixed right-4 bottom-4 z-50">
+    <Box
+      as="nav"
+      aria-label="Create time entry"
+      className="fixed right-4 bottom-4 z-50"
+    >
       <Button
         type="button"
         aria-label="New time entry"
@@ -139,7 +160,7 @@ function CreateEntryFab(props: { blocked: boolean; onOpen: () => void }) {
       >
         <PlusIcon />
       </Button>
-    </div>
+    </Box>
   );
 }
 
@@ -151,17 +172,16 @@ function CreateEntryDialog(props: {
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
 }) {
   const canDismiss = dismissable(props.status);
+  const reduceMotion = usePrefersReducedMotion();
   return (
     <Dialog.Root
       open
       size="full"
       scrollBehavior="inside"
-      motionPreset="slide-in-bottom"
+      motionPreset={reduceMotion ? "none" : "slide-in-bottom"}
       closeOnEscape={canDismiss}
-      // Service Select portals to body; a pick would look like an outside click.
-      closeOnInteractOutside={false}
-      // Modal aria-hides body siblings, including that listbox, so getByRole and AT miss the options.
-      modal={false}
+      closeOnInteractOutside={canDismiss}
+      modal
       trapFocus={true}
       preventScroll={true}
       onOpenChange={(details) => {
@@ -171,10 +191,9 @@ function CreateEntryDialog(props: {
       }}
     >
       <Portal>
-        {/* Select content is zIndex.popover. The sheet must sit below that layer or the listbox is covered. */}
-        <Dialog.Backdrop zIndex="modal" />
-        <Dialog.Positioner zIndex="modal">
-          <Dialog.Content zIndex="modal">
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
             <Dialog.Header
               display="flex"
               justifyContent="space-between"

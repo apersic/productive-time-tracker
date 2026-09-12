@@ -11,13 +11,22 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useState, type ReactElement, type SubmitEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactElement,
+  type SubmitEvent,
+} from "react";
 import { Navigate, useNavigate } from "react-router";
 import { parseAccessToken, parseOrganizationId, useAuth } from "../lib/auth";
 import { PageHeading, SITE_NAME } from "../lib/document";
 import { Card } from "../ui";
 import {
   fieldIssueMessage,
+  FieldWarning,
+  focusFirstInvalid,
   presenceIssue,
   type FieldIssue,
 } from "../lib/forms";
@@ -37,6 +46,19 @@ export function LoginPage() {
   );
   const [error, setError] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [submitFailed, setSubmitFailed] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const formErrorId = useId();
+
+  useEffect(() => {
+    if (!submitFailed) {
+      return;
+    }
+    const form = formRef.current;
+    if (form) {
+      focusFirstInvalid(form);
+    }
+  }, [submitFailed, organizationIssue, tokenIssue]);
 
   switch (session.kind) {
     case "booting":
@@ -57,6 +79,7 @@ export function LoginPage() {
     case "authenticated":
       return <Navigate to="/" replace />;
     case "anonymous":
+    case "expired":
     case "unavailable":
       break;
     default: {
@@ -66,7 +89,11 @@ export function LoginPage() {
   }
 
   const restoreError =
-    session.kind === "unavailable" ? session.error.message : undefined;
+    session.kind === "unavailable"
+      ? session.error.message
+      : session.kind === "expired"
+        ? "Your session expired. Log in again."
+        : undefined;
   const formError = error ?? restoreError;
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -79,8 +106,10 @@ export function LoginPage() {
     setOrganizationIssue(nextOrganizationIssue);
     setTokenIssue(nextTokenIssue);
     if (nextOrganizationIssue || nextTokenIssue) {
+      setSubmitFailed(true);
       return;
     }
+    setSubmitFailed(false);
     const parsedOrganizationId = parseOrganizationId(organizationId);
     const parsedAccessToken = parseAccessToken(accessToken);
     if (!parsedOrganizationId || !parsedAccessToken) {
@@ -106,27 +135,36 @@ export function LoginPage() {
 
   return (
     <LoginChrome>
-      <form noValidate onSubmit={(event) => void onSubmit(event)}>
+      <form
+        ref={formRef}
+        noValidate
+        aria-describedby={formError ? formErrorId : undefined}
+        onSubmit={(event) => void onSubmit(event)}
+      >
         <Card>
           <Stack gap="5">
             <LoginIntro />
             <Field.Root required invalid={organizationIssue !== undefined}>
               <Field.Label>Organization ID</Field.Label>
-              <Input
-                name="organizationId"
-                value={organizationId}
-                onChange={(event) => {
-                  setOrganizationId(event.target.value);
-                  setOrganizationIssue(undefined);
-                }}
-                onBlur={() => {
-                  setOrganizationIssue(presenceIssue(organizationId));
-                }}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="12345…"
-                _placeholder={{ color: "fg.subtle" }}
-              />
+              <InputGroup
+                endElement={organizationIssue ? <FieldWarning /> : undefined}
+              >
+                <Input
+                  name="organizationId"
+                  value={organizationId}
+                  onChange={(event) => {
+                    setOrganizationId(event.target.value);
+                    setOrganizationIssue(undefined);
+                  }}
+                  onBlur={() => {
+                    setOrganizationIssue(presenceIssue(organizationId));
+                  }}
+                  autoComplete="username"
+                  spellCheck={false}
+                  placeholder="12345…"
+                  _placeholder={{ color: "fg.subtle" }}
+                />
+              </InputGroup>
               {organizationIssue ? (
                 <Field.ErrorText>
                   {fieldIssueMessage(organizationIssue)}
@@ -137,17 +175,22 @@ export function LoginPage() {
               <Field.Label>API token</Field.Label>
               <InputGroup
                 endElement={
-                  <IconButton
-                    type="button"
-                    variant="ghost"
-                    size="xs"
-                    aria-label={
-                      accessTokenVisible ? "Hide token" : "Show token"
-                    }
-                    onClick={() => setAccessTokenVisible((visible) => !visible)}
-                  >
-                    {accessTokenVisible ? <EyeOffIcon /> : <EyeIcon />}
-                  </IconButton>
+                  <Flex align="center" gap="1">
+                    {tokenIssue ? <FieldWarning /> : null}
+                    <IconButton
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      aria-label={
+                        accessTokenVisible ? "Hide token" : "Show token"
+                      }
+                      onClick={() =>
+                        setAccessTokenVisible((visible) => !visible)
+                      }
+                    >
+                      {accessTokenVisible ? <EyeOffIcon /> : <EyeIcon />}
+                    </IconButton>
+                  </Flex>
                 }
               >
                 <Input
@@ -161,7 +204,7 @@ export function LoginPage() {
                   onBlur={() => {
                     setTokenIssue(presenceIssue(accessToken));
                   }}
-                  autoComplete="off"
+                  autoComplete="current-password"
                   spellCheck={false}
                   placeholder="Paste your token…"
                   _placeholder={{ color: "fg.subtle" }}
@@ -174,7 +217,7 @@ export function LoginPage() {
               ) : null}
             </Field.Root>
             {formError ? (
-              <Text color="fg.error" role="alert" aria-live="polite">
+              <Text id={formErrorId} color="fg.error" role="alert">
                 {formError}
               </Text>
             ) : null}
@@ -209,6 +252,7 @@ function LoginChrome(props: { children: ReactElement }) {
     <Flex
       as="main"
       id="main"
+      aria-label={SITE_NAME}
       minH="100dvh"
       bg="bg.subtle"
       color="fg"

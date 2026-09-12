@@ -53,8 +53,11 @@ test.describe("crawler shell", () => {
   });
 });
 
-test("login sets the tab title and a single h1", async ({ page }) => {
+test("login has a skip link and a single h1", async ({ page }) => {
   await page.goto("/login");
+  await expect(
+    page.getByRole("link", { name: "Skip to content" }),
+  ).toHaveAttribute("href", "#main");
   await expect(page).toHaveTitle("Log in · Productive Time Tracker");
   await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
   await expect(page.locator("head title")).toHaveCount(1);
@@ -72,6 +75,7 @@ test("home sets the tab title", async ({ page }) => {
   await openHome(page);
   await expect(page).toHaveTitle("Home · Productive Time Tracker");
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
+  await expect(page.locator("h1")).toHaveCount(1);
 });
 
 test("edit title stays generic and hides entry copy", async ({ page }) => {
@@ -83,7 +87,7 @@ test("edit title stays generic and hides entry copy", async ({ page }) => {
     included: [jsonApiService()],
   }));
   await openHome(page);
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveTitle("Edit time entry · Productive Time Tracker");
   await expect(
@@ -109,9 +113,9 @@ test("client-side navigation updates the tab title", async ({ page }) => {
   }));
   await openHome(page);
   await expect(page).toHaveTitle("Home · Productive Time Tracker");
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveTitle("Edit time entry · Productive Time Tracker");
-  await page.getByRole("link", { name: "Back" }).click();
+  await page.getByRole("link", { name: "Back to home" }).click();
   await expect(page).toHaveTitle("Home · Productive Time Tracker");
 });

@@ -30,6 +30,7 @@ function typeForNotice(notice: Notice): "success" | "warning" | "error" {
     case "recoverTimerFailed":
     case "entryDeleteFailed":
     case "entryUpdateFailed":
+    case "copyDayFailed":
     case "sessionExpired":
       return "error";
     default: {
@@ -51,8 +52,10 @@ function durationForNotice(notice: Notice): number {
     case "recoverTimerFailed":
     case "entryDeleteFailed":
     case "entryUpdateFailed":
-    case "sessionExpired":
+    case "copyDayFailed":
       return 8000;
+    case "sessionExpired":
+      return Infinity;
     default: {
       const _exhaustive: never = notice;
       return _exhaustive;
@@ -73,6 +76,7 @@ function toastIdForNotice(notice: Notice): string | undefined {
     case "entryDeleteFailed":
     case "entryUpdated":
     case "entryUpdateFailed":
+    case "copyDayFailed":
       return undefined;
     default: {
       const _exhaustive: never = notice;

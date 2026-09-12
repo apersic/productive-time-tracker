@@ -10,21 +10,19 @@ QUnit.test("complete hides the footer", (assert) => {
   assert.deepEqual(loadMoreControl({ kind: "complete" }), { visible: false });
 });
 
-QUnit.test("more shows Load more idle", (assert) => {
-  assert.deepEqual(loadMoreControl({ kind: "more", next: NEXT }), {
-    visible: true,
-    label: "Load more",
-    pending: false,
-    error: undefined,
-  });
-});
+QUnit.test(
+  "more hides the footer because scrolling loads the next page",
+  (assert) => {
+    assert.deepEqual(loadMoreControl({ kind: "more", next: NEXT }), {
+      visible: false,
+    });
+  },
+);
 
-QUnit.test("loadingMore keeps Load more pending", (assert) => {
+QUnit.test("loadingMore shows a status", (assert) => {
   assert.deepEqual(loadMoreControl({ kind: "loadingMore", next: NEXT }), {
     visible: true,
-    label: "Load more",
-    pending: true,
-    error: undefined,
+    kind: "status",
   });
 });
 
@@ -33,8 +31,7 @@ QUnit.test("moreFailed shows Retry with the error", (assert) => {
     loadMoreControl({ kind: "moreFailed", next: NEXT, error: ERROR }),
     {
       visible: true,
-      label: "Retry",
-      pending: false,
+      kind: "retry",
       error: "nope",
     },
   );

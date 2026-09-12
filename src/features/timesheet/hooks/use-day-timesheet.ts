@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Credentials, Person } from "../../../lib/auth";
+import type { Credentials, LogoutArgs, Person } from "../../../lib/auth";
 import {
   createTimeEntry,
   deleteTimeEntry,
@@ -74,7 +74,7 @@ function dayForEntry(state: DayTimesheet, entryId: TimeEntryId): CalendarDay {
 export function useDayTimesheet(args: {
   credentials: Credentials;
   person: Person;
-  logout: () => void;
+  logout: (args?: LogoutArgs) => void;
   initialDay: CalendarDay;
 }) {
   const [timesheet, setTimesheet] = useState<DayTimesheet>(() =>
@@ -104,7 +104,7 @@ export function useDayTimesheet(args: {
   const onError = useCallback((error: TimesheetError): boolean => {
     if (error.kind === "unauthorized") {
       announce({ op: "sessionExpired" });
-      argsRef.current.logout();
+      argsRef.current.logout({ reason: "expired" });
       return true;
     }
     return false;

@@ -32,6 +32,7 @@ function HeaderBar(props: { children: ReactNode }) {
   return (
     <Box
       as="header"
+      flexShrink="0"
       bg="bg"
       borderBottomWidth="1px"
       borderColor="border"
