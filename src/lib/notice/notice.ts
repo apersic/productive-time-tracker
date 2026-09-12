@@ -30,6 +30,7 @@ export type Notice =
   | { kind: "entryDeleteFailed"; message: string }
   | { kind: "entryUpdated" }
   | { kind: "entryUpdateFailed"; message: string }
+  | { kind: "copyDayFailed"; message: string }
   | { kind: "sessionExpired" };
 
 export type NoticeCopy =
@@ -46,7 +47,13 @@ export function noticeFromWrite(write: Write): Notice | undefined {
     }
     case "copyDay": {
       if (!write.result.ok) {
-        return undefined;
+        if (write.result.error.kind === "unauthorized") {
+          return undefined;
+        }
+        return {
+          kind: "copyDayFailed",
+          message: write.result.error.message,
+        };
       }
       if (write.result.created <= 0) {
         return undefined;
@@ -168,6 +175,12 @@ export function copyForNotice(notice: Notice): NoticeCopy {
       return {
         level: "detail",
         title: "Couldn't update the time entry",
+        description: notice.message,
+      };
+    case "copyDayFailed":
+      return {
+        level: "detail",
+        title: "Couldn't copy the previous day",
         description: notice.message,
       };
     case "sessionExpired":

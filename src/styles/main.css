@@ -6,6 +6,13 @@ body {
   color-scheme: light;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html,
+  body {
+    scroll-behavior: auto;
+  }
+}
+
 .scroll-hidden::-webkit-scrollbar {
   display: none;
 }

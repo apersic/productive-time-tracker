@@ -1,19 +1,5 @@
-import {
-  Box,
-  Button,
-  Field,
-  Flex,
-  Input,
-  Portal,
-  Text,
-} from "@chakra-ui/react";
-import {
-  useEffect,
-  useLayoutEffect,
-  useState,
-  useRef,
-  type ReactElement,
-} from "react";
+import { Box, Button, Field, Flex, Input, Text } from "@chakra-ui/react";
+import { useEffect, useRef, type ReactElement } from "react";
 import {
   FieldWarning,
   fieldIssueMessage,
@@ -34,31 +20,10 @@ export function ServiceField(props: {
 }): ReactElement {
   const { picker } = props;
   const triggerWrapRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const open = picker.lifecycle.kind === "open";
   const close = picker.close;
-  const [menuRect, setMenuRect] = useState<
-    { top: number; left: number; width: number } | undefined
-  >(undefined);
-
-  useLayoutEffect(() => {
-    if (!open) {
-      setMenuRect(undefined);
-      return;
-    }
-    const trigger = triggerRef.current;
-    if (!trigger) {
-      return;
-    }
-    const rect = trigger.getBoundingClientRect();
-    setMenuRect({
-      top: rect.bottom + 4,
-      left: rect.left,
-      width: rect.width,
-    });
-  }, [open]);
 
   useEffect(() => {
     return () => {
@@ -90,11 +55,11 @@ export function ServiceField(props: {
   }, [open, picker]);
 
   useEffect(() => {
-    if (!open || !menuRect) {
+    if (!open) {
       return;
     }
     searchRef.current?.focus();
-  }, [open, menuRect]);
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -104,7 +69,31 @@ export function ServiceField(props: {
       if (event.key === "Escape") {
         event.preventDefault();
         picker.close();
+        return;
       }
+      if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
+        return;
+      }
+      const options =
+        menuRef.current?.querySelectorAll<HTMLElement>('[role="option"]');
+      if (!options || options.length === 0) {
+        return;
+      }
+      event.preventDefault();
+      const current = document.activeElement;
+      const index = Array.from(options).findIndex(
+        (option) => option === current,
+      );
+      const last = options.length - 1;
+      const next =
+        event.key === "ArrowDown"
+          ? index < 0
+            ? 0
+            : Math.min(index + 1, last)
+          : index < 0
+            ? last
+            : Math.max(index - 1, 0);
+      options[next]?.focus();
     }
     document.addEventListener("keydown", onKey);
     return () => {
@@ -116,15 +105,9 @@ export function ServiceField(props: {
 
   return (
     <Field.Root required invalid={props.issue !== undefined} width="full">
-      <Flex align="center" gap="1">
-        <Field.Label mb="0">Service</Field.Label>
-        {props.issue ? (
-          <FieldWarning message={fieldIssueMessage(props.issue)} />
-        ) : null}
-      </Flex>
-      <Box ref={triggerWrapRef} width="full">
+      <Field.Label>Service</Field.Label>
+      <Box ref={triggerWrapRef} width="full" position="relative">
         <Button
-          ref={triggerRef}
           type="button"
           role="combobox"
           aria-label="Service"
@@ -136,6 +119,9 @@ export function ServiceField(props: {
           justifyContent="space-between"
           fontWeight="normal"
           disabled={props.disabled}
+          borderColor={props.issue ? "fg.error" : undefined}
+          _hover={props.issue ? { borderColor: "fg.error" } : undefined}
+          _focusVisible={props.issue ? { borderColor: "fg.error" } : undefined}
           onClick={() => {
             if (props.disabled) {
               return;
@@ -153,15 +139,14 @@ export function ServiceField(props: {
               : "Select a service"}
           </Text>
         </Button>
-      </Box>
-      {open && menuRect ? (
-        <Portal>
+        {open ? (
           <Box
             ref={menuRef}
-            position="fixed"
-            top={`${menuRect.top}px`}
-            left={`${menuRect.left}px`}
-            width={`${Math.max(menuRect.width, 256)}px`}
+            position="absolute"
+            top="calc(100% + 0.25rem)"
+            left="0"
+            width="full"
+            minW="16rem"
             zIndex="popover"
             bg="bg"
             borderWidth="1px"
@@ -198,7 +183,13 @@ export function ServiceField(props: {
               />
             </Box>
           </Box>
-        </Portal>
+        ) : null}
+      </Box>
+      {props.issue ? (
+        <Flex align="center" gap="1">
+          <FieldWarning />
+          <Field.ErrorText>{fieldIssueMessage(props.issue)}</Field.ErrorText>
+        </Flex>
       ) : null}
     </Field.Root>
   );

@@ -12,14 +12,14 @@ import {
   saveCredentials,
 } from "./credentials-storage.ts";
 import { restoreOutcome, type AuthenticateResult } from "./restore-outcome.ts";
-import type { AuthError, Credentials, Session } from "./session.ts";
+import type { AuthError, Credentials, LogoutArgs, Session } from "./session.ts";
 
 export type AuthContextValue = {
   session: Session;
   login: (
     credentials: Credentials,
   ) => Promise<{ ok: true } | { ok: false; error: AuthError }>;
-  logout: () => void;
+  logout: (args?: LogoutArgs) => void;
 };
 
 export const AuthContext = createContext<AuthContextValue | undefined>(
@@ -104,9 +104,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setSession(result.session);
         return { ok: true };
       },
-      logout() {
+      logout(args?: LogoutArgs) {
         clearCredentials();
-        setSession({ kind: "anonymous" });
+        setSession(
+          args?.reason === "expired"
+            ? { kind: "expired" }
+            : { kind: "anonymous" },
+        );
       },
     }),
     [session],

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import type { Credentials, Person } from "../../../lib/auth";
+import type { Credentials, LogoutArgs, Person } from "../../../lib/auth";
 import { announce } from "../../../lib/notice";
 import { fetchTimeEntry, updateTimeEntry } from "../../../providers/productive";
 import { useServicePicker } from "../../timesheet/hooks/use-service-picker.ts";
@@ -71,7 +71,7 @@ function pickerContext(page: EditEntryPageState): PickerContext {
 export function useEditEntry(args: {
   credentials: Credentials;
   person: Person;
-  logout: () => void;
+  logout: (args?: LogoutArgs) => void;
   route: EditEntryRoute;
 }): {
   page: EditEntryPageState;
@@ -123,7 +123,7 @@ export function useEditEntry(args: {
       if (!result.ok) {
         if (result.error.kind === "unauthorized") {
           announce({ op: "sessionExpired" });
-          argsRef.current.logout();
+          argsRef.current.logout({ reason: "expired" });
           return;
         }
         setPage({ kind: "failed", entryId, error: result.error });
@@ -171,7 +171,7 @@ export function useEditEntry(args: {
       if (!result.ok) {
         if (result.error.kind === "unauthorized") {
           announce({ op: "sessionExpired" });
-          argsRef.current.logout();
+          argsRef.current.logout({ reason: "expired" });
           return false;
         }
         announce({ op: "updateEntry", result });

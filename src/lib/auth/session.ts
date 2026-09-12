@@ -20,8 +20,11 @@ export type AuthError = {
 export type Session =
   | { kind: "booting" }
   | { kind: "anonymous" }
+  | { kind: "expired" }
   | { kind: "unavailable"; error: AuthError }
   | { kind: "authenticated"; credentials: Credentials; person: Person };
+
+export type LogoutArgs = { reason: "expired" };
 
 export function parseOrganizationId(value: string): OrganizationId | undefined {
   const trimmed = value.trim();

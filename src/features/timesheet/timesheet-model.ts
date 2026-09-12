@@ -167,14 +167,18 @@ export function parseTimerId(value: string): TimerId | undefined {
   return trimmed as TimerId;
 }
 
+function serviceLabel(service: { id: string; name: string }): string {
+  return service.name.length > 0 ? service.name : service.id;
+}
+
 export function entryListingCopy(args: {
-  service: { name: string };
+  service: { id: string; name: string };
   task?: { title: string };
   project?: { name: string };
 }): EntryListingCopy {
   const taskTitle = args.task?.title;
   const projectName = args.project?.name;
-  const serviceName = args.service.name;
+  const serviceName = serviceLabel(args.service);
   if (taskTitle !== undefined && taskTitle.length > 0) {
     if (projectName !== undefined && projectName.length > 0) {
       return {

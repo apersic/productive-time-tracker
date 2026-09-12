@@ -14,6 +14,7 @@ export const system = createSystem(defaultConfig, {
         text: { value: PALETTE.text },
         blue: {
           500: { value: PALETTE.primary },
+          600: { value: PALETTE.solid },
         },
       },
       fonts: {
@@ -29,6 +30,7 @@ export const system = createSystem(defaultConfig, {
         },
         fg: {
           DEFAULT: { value: { _light: "{colors.text}" } },
+          subtle: { value: { _light: "{colors.gray.600}" } },
         },
         gray: {
           focusRing: { value: { _light: "{colors.blue.500}" } },
