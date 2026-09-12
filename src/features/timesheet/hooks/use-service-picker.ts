@@ -45,6 +45,7 @@ export function useServicePicker(args: {
     initialPickerState,
   );
   const argsRef = useRef(args);
+  argsRef.current = args;
   const generationRef = useRef(state.searchGeneration);
   const searchDebouncedRef = useRef<DebouncedFn<[string, number]> | undefined>(
     undefined,
@@ -54,10 +55,6 @@ export function useServicePicker(args: {
   const pinnedId =
     args.context.kind === "ready" ? args.context.pinned?.id : undefined;
   const dayRef = useRef(day);
-
-  useEffect(() => {
-    argsRef.current = args;
-  }, [args]);
 
   useEffect(() => {
     generationRef.current = state.searchGeneration;

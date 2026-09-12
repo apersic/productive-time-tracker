@@ -41,9 +41,16 @@ import {
   type ServicesList,
   type TrackableService,
 } from "../../features/timesheet";
+import type { CalendarDay } from "../../lib/time/calendar-day.ts";
+import { CalendarDayPicker } from "./calendar-day-picker.tsx";
 import { Card } from "./card.tsx";
 import { NoteEditor } from "./note-editor.tsx";
 import { ServiceField } from "./service-field.tsx";
+
+export type EntryDayControl = {
+  readonly value: CalendarDay;
+  select: (day: CalendarDay) => void;
+};
 
 const DURATION_HINT = "Minutes or hh:mm, like 90 or 1:30";
 
@@ -137,6 +144,7 @@ function loadingStatus(args: {
 
 export function EntryForm(props: {
   initial: EntryFields;
+  day?: EntryDayControl;
   submitLabel: string;
   picker: ServicePicker;
   submitting: boolean;
@@ -314,6 +322,18 @@ export function EntryForm(props: {
             <Text color="fg.error" role="alert">
               {availability.error.message}
             </Text>
+          ) : null}
+          {props.day ? (
+            // Changing day refetches services. formDisabled is true while that
+            // loads, so this row keys off submitting only.
+            <Field.Root disabled={props.submitting} width="full">
+              <CalendarDayPicker
+                label="Date"
+                value={props.day.value}
+                onChange={props.day.select}
+                disabled={props.submitting}
+              />
+            </Field.Root>
           ) : null}
           {selectVisible ? (
             <ServiceField
