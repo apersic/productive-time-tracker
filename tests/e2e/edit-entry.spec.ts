@@ -51,7 +51,7 @@ test("saving patches the entry and returns home with a toast", async ({
     return { status: 200, body: response };
   });
   await openHome(page);
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
   await page.locator('input[name="duration"]').fill("2:00");
@@ -82,7 +82,7 @@ test("PATCH 500 stays on edit and keeps the session", async ({ page }) => {
   }));
   await mockTimeEntryUpdate(page, () => ({ status: 500 }));
   await openHome(page);
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
@@ -100,7 +100,7 @@ test("PATCH 403 stays on edit without logging out", async ({ page }) => {
   }));
   await mockTimeEntryUpdate(page, () => ({ status: 403 }));
   await openHome(page);
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
@@ -137,7 +137,7 @@ test("cold /edit/entry-1 shows a skeleton until the gate opens", async ({
   await expect(
     page.getByRole("heading", { name: "Edit time entry" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to home" })).toBeVisible();
   await expect(page.locator('input[name="duration"]')).toHaveCount(0);
   load.open();
   await expect(page.locator('input[name="duration"]')).toHaveValue("01:30");
@@ -200,6 +200,29 @@ test("saving a past-day entry returns home on that day", async ({ page }) => {
   await page.locator('input[name="duration"]').fill("2:00");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page).toHaveURL("/");
-  await expect(page.locator('input[name="day"]')).toHaveValue(past);
+  await expect(page.getByRole("textbox", { name: "Day" })).toHaveValue(
+    "September 1, 2026",
+  );
   await expect(page.getByText("02:00")).toBeVisible();
+});
+
+test("Back to home asks before discarding edits", async ({ page }) => {
+  await mockEditListing(page, () => ({
+    data: [jsonApiTimeEntry()],
+    included: [jsonApiService()],
+  }));
+  await openHome(page);
+  await page.getByRole("button", { name: /More actions for/ }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await page.locator('input[name="duration"]').fill("2:00");
+  await page.getByRole("link", { name: "Back to home" }).click();
+  const dialog = page.getByRole("alertdialog", {
+    name: "Discard unsaved changes?",
+  });
+  await expect(dialog).toBeVisible();
+  await page.getByRole("button", { name: "Keep editing" }).click();
+  await expect(page).toHaveURL(/\/edit\/entry-1/);
+  await page.getByRole("link", { name: "Back to home" }).click();
+  await page.getByRole("button", { name: "Discard" }).click();
+  await expect(page).toHaveURL("/");
 });

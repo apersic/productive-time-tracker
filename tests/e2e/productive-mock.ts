@@ -52,6 +52,7 @@ export function jsonApiTimeEntry(
     date?: string;
     time?: number;
     note?: string;
+    serviceId?: string;
     task?: { id: string; title: string };
   },
 ) {
@@ -64,7 +65,7 @@ export function jsonApiTimeEntry(
       time: extras?.time ?? 90,
     },
     relationships: {
-      service: { data: { type: "services", id: "svc-1" } },
+      service: { data: { type: "services", id: extras?.serviceId ?? "svc-1" } },
       ...(extras?.task
         ? { task: { data: { type: "tasks", id: extras.task.id } } }
         : {}),

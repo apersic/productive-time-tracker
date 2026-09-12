@@ -649,7 +649,7 @@ QUnit.test(
 QUnit.module("entryListingCopy");
 
 QUnit.test("entryListingCopy matches Productive listing rules", (assert) => {
-  const service = { name: "Dev" };
+  const service = { id: "svc-dev", name: "Dev" };
   assert.deepEqual(entryListingCopy({ service }), {
     title: "Dev",
     subtitle: undefined,
@@ -675,6 +675,12 @@ QUnit.test("entryListingCopy matches Productive listing rules", (assert) => {
       project: { name: "Bank" },
     }),
     { title: "Dev", subtitle: "Bank" },
+  );
+  assert.deepEqual(
+    entryListingCopy({
+      service: { id: "svc-blank", name: "" },
+    }),
+    { title: "svc-blank", subtitle: undefined },
   );
 });
 

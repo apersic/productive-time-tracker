@@ -89,17 +89,23 @@ test("Play pending is only on the clicked row", async ({ page }) => {
   await openHome(page);
   const row1 = page.locator('[data-entry-id="entry-1"]');
   const row2 = page.locator('[data-entry-id="entry-2"]');
-  await row1.getByRole("button", { name: "Play" }).click();
-  await expect(row1.getByRole("button", { name: "Play" })).toHaveAttribute(
-    "data-loading",
-  );
-  await expect(row2.getByRole("button", { name: "Play" })).toBeDisabled();
-  await expect(row2.getByRole("button", { name: "Play" })).not.toHaveAttribute(
-    "data-loading",
-  );
+  await row1.getByRole("button", { name: /Start timer for/ }).click();
+  await expect(
+    row1.getByRole("button", { name: /Start timer for/ }),
+  ).toHaveAttribute("data-loading");
+  await expect(
+    row2.getByRole("button", { name: /Start timer for/ }),
+  ).toBeDisabled();
+  await expect(
+    row2.getByRole("button", { name: /Start timer for/ }),
+  ).not.toHaveAttribute("data-loading");
   start.open();
-  await expect(row1.getByRole("button", { name: "Stop" })).toBeVisible();
-  await expect(row2.getByRole("button", { name: "Play" })).toBeEnabled();
+  await expect(
+    row1.getByRole("button", { name: /Stop timer for/ }),
+  ).toBeVisible();
+  await expect(
+    row2.getByRole("button", { name: /Start timer for/ }),
+  ).toBeEnabled();
 });
 
 test("Retry stays mounted and loading after click", async ({ page }) => {
@@ -146,9 +152,9 @@ test("Retry stays mounted and loading after click", async ({ page }) => {
   await openHome(page);
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
   await page.getByRole("button", { name: "Retry" }).click();
-  await expect(page.getByRole("button", { name: "Load more" })).toHaveAttribute(
-    "data-loading",
-  );
+  await expect(
+    page.getByRole("status", { name: "Loading more entries" }),
+  ).toBeVisible();
   retryGate.open();
   await expect(page.locator('[data-entry-id="entry-2"]')).toBeVisible();
 });
@@ -168,7 +174,9 @@ test("a time entry shows the note, duration, and Play", async ({ page }) => {
   await expect(page.getByText("Wrote tests")).toBeVisible();
   await expect(page.locator(".entry-note li")).toHaveCount(1);
   await expect(page.getByText("01:30")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Start timer for/ }),
+  ).toBeVisible();
 });
 
 test("creating an entry posts the form and shows the row", async ({ page }) => {
@@ -193,12 +201,14 @@ test("creating an entry posts the form and shows the row", async ({ page }) => {
     });
   });
   await openHome(page);
-  await expect(page.locator('input[name="duration"]')).toHaveCount(1);
+  await expect(page.getByRole("textbox", { name: "Description" })).toHaveCount(
+    1,
+  );
   await expect(
     page.getByRole("button", { name: "New time entry" }),
   ).toHaveCount(0);
-  await page.locator('input[name="duration"]').fill("1:30");
-  const editor = page.locator(".note-editor .ProseMirror");
+  await page.getByLabel("Duration").fill("1:30");
+  const editor = page.getByRole("textbox", { name: "Description" });
   await editor.click();
   await editor.pressSequentially("Wrote tests");
   await expect(editor).toContainText("Wrote tests");
@@ -239,11 +249,15 @@ test("Play posts a timer and Stop stops it", async ({ page }) => {
     included: [jsonApiService()],
   }));
   await openHome(page);
-  await page.getByRole("button", { name: "Play" }).click();
-  await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+  await page.getByRole("button", { name: /Start timer for/ }).click();
+  await expect(
+    page.getByRole("button", { name: /Stop timer for/ }),
+  ).toBeVisible();
   expect(startedEntryId).toBe("entry-1");
-  await page.getByRole("button", { name: "Stop" }).click();
-  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+  await page.getByRole("button", { name: /Stop timer for/ }).click();
+  await expect(
+    page.getByRole("button", { name: /Start timer for/ }),
+  ).toBeVisible();
   expect(stoppedTimerId).toBe("timer-1");
 });
 
@@ -277,7 +291,7 @@ test("restore clears credentials on 401", async ({ page }) => {
 async function openEntryDeleteConfirm(page: Page, entryId = "entry-1") {
   await page
     .locator(`[data-entry-id="${entryId}"]`)
-    .getByRole("button", { name: "More" })
+    .getByRole("button", { name: /More actions for/ })
     .click();
   await page.getByRole("menuitem", { name: "Delete" }).click();
   await expect(page.getByRole("alertdialog")).toBeVisible();
@@ -295,7 +309,7 @@ test("More Edit opens the prefilled form and Cancel leaves the row", async ({
   }));
   await mockTimeEntryDelete(page);
   await openHome(page);
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
   await expect(page.locator('input[name="duration"]')).toHaveValue("01:30");
@@ -328,7 +342,7 @@ test("Confirm deletes the row and shows a success toast", async ({ page }) => {
   await mockTimeEntryDelete(page);
   await openHome(page);
   await openEntryDeleteConfirm(page);
-  await page.getByRole("button", { name: "Confirm" }).click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByText("Time entry deleted")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Development" })).toHaveCount(
     0,
@@ -352,7 +366,7 @@ test("a 500 delete keeps the row and shows an error toast", async ({
   await mockTimeEntryDelete(page, () => ({ status: 500 }));
   await openHome(page);
   await openEntryDeleteConfirm(page);
-  await page.getByRole("button", { name: "Confirm" }).click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByText("Couldn't delete the time entry")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Development" }),
@@ -370,7 +384,7 @@ test("a 403 delete keeps the session and the row", async ({ page }) => {
   await mockTimeEntryDelete(page, () => ({ status: 403 }));
   await openHome(page);
   await openEntryDeleteConfirm(page);
-  await page.getByRole("button", { name: "Confirm" }).click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByText("Couldn't delete the time entry")).toBeVisible();
   await expect(
     page.getByText("This time entry can't be deleted."),
@@ -393,7 +407,7 @@ test("a 404 delete still removes the row", async ({ page }) => {
   await mockTimeEntryDelete(page, () => ({ status: 404 }));
   await openHome(page);
   await openEntryDeleteConfirm(page);
-  await page.getByRole("button", { name: "Confirm" }).click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByText("Time entry deleted")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Development" })).toHaveCount(
     0,
@@ -410,12 +424,16 @@ test("deleting a running entry idles the timer", async ({ page }) => {
   }));
   await mockTimeEntryDelete(page);
   await openHome(page);
-  await page.getByRole("button", { name: "Play" }).click();
-  await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+  await page.getByRole("button", { name: /Start timer for/ }).click();
+  await expect(
+    page.getByRole("button", { name: /Stop timer for/ }),
+  ).toBeVisible();
   await openEntryDeleteConfirm(page);
-  await page.getByRole("button", { name: "Confirm" }).click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByText("Time entry deleted")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Stop timer for/ }),
+  ).toHaveCount(0);
 });
 
 test("deleting the last loaded row with more pages refills page 1", async ({
@@ -464,7 +482,7 @@ test("deleting the last loaded row with more pages refills page 1", async ({
   await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
   await expect(page.locator('[data-entry-id="entry-1"]')).toHaveCount(1);
   await openEntryDeleteConfirm(page);
-  await page.getByRole("button", { name: "Confirm" }).click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByText("Time entry deleted")).toBeVisible();
   await expect(page.locator('[data-entry-id="entry-1"]')).toHaveCount(0);
   await expect(page.locator('[data-entry-id="entry-2"]')).toBeVisible();
@@ -545,15 +563,11 @@ test("opening the service list does not show a blank warning", async ({
   const combobox = page.getByRole("combobox", { name: "Service" });
   await combobox.click();
   await expect(page.getByRole("option", { name: "Design" })).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Can't be blank" }),
-  ).toHaveCount(0);
+  await expect(page.getByText("Can't be blank")).toHaveCount(0);
   await page.keyboard.press("Escape");
   await page.locator('input[name="duration"]').fill("1:30");
   await page.getByRole("button", { name: "Add entry" }).click();
-  await expect(
-    page.getByRole("button", { name: "Can't be blank" }),
-  ).toBeVisible();
+  await expect(page.getByText("Can't be blank")).toBeVisible();
 });
 
 test("services group under expandable company trees", async ({ page }) => {
@@ -606,7 +620,7 @@ test.describe("mobile", () => {
     });
     await openHome(page);
     const fab = page.getByRole("button", { name: "New time entry" });
-    await expect(page.locator('input[name="duration"]')).toHaveCount(0);
+    await expect(page.getByLabel("Duration")).toHaveCount(0);
     await expect(fab).toBeInViewport();
     await fab.click();
     const dialog = page.getByRole("dialog", { name: "New time entry" });
@@ -614,8 +628,8 @@ test.describe("mobile", () => {
     await expect(dialog.getByRole("button", { name: "Close" })).toBeVisible();
     await dialog.getByRole("combobox", { name: "Service" }).click();
     await page.getByRole("option", { name: "Design" }).click();
-    await dialog.locator('input[name="duration"]').fill("1:30");
-    const editor = dialog.locator(".note-editor .ProseMirror");
+    await dialog.getByLabel("Duration").fill("1:30");
+    const editor = dialog.getByRole("textbox", { name: "Description" });
     await editor.click();
     await editor.pressSequentially("Wrote tests");
     await dialog.getByRole("button", { name: "Add entry" }).click();

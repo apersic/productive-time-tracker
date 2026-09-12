@@ -13,6 +13,7 @@ import {
   parseHhMm,
   parseMinutes,
   previousCalendarDay,
+  nextCalendarDay,
   todayLocal,
 } from "../../src/lib/time";
 
@@ -43,6 +44,17 @@ QUnit.test("previousCalendarDay subtracts one local day", (assert) => {
   }
   assert.strictEqual(previousCalendarDay(tenth), "2026-09-09");
   assert.strictEqual(previousCalendarDay(marchFirst), "2026-02-28");
+});
+
+QUnit.test("nextCalendarDay adds one local day", (assert) => {
+  const tenth = parseCalendarDay("2026-09-10");
+  const feb28 = parseCalendarDay("2026-02-28");
+  assert.ok(tenth && feb28);
+  if (!tenth || !feb28) {
+    return;
+  }
+  assert.strictEqual(nextCalendarDay(tenth), "2026-09-11");
+  assert.strictEqual(nextCalendarDay(feb28), "2026-03-01");
 });
 
 QUnit.module("duration");
