@@ -100,11 +100,21 @@ QUnit.test("copy partial with created 0 is a no-op", (assert) => {
   );
 });
 
-QUnit.test("copy fail is a no-op", (assert) => {
-  assert.strictEqual(
+QUnit.test("copy fail maps to copyDayFailed", (assert) => {
+  assert.deepEqual(
     noticeFromWrite({
       op: "copyDay",
       result: { ok: false, error: error("network") },
+    }),
+    { kind: "copyDayFailed", message: "boom" },
+  );
+});
+
+QUnit.test("copy fail unauthorized is a no-op", (assert) => {
+  assert.strictEqual(
+    noticeFromWrite({
+      op: "copyDay",
+      result: { ok: false, error: error("unauthorized") },
     }),
     undefined,
   );
@@ -298,6 +308,20 @@ QUnit.test("recoverTimerFailed uses the error message", (assert) => {
     {
       level: "detail",
       title: "Couldn't refresh the timer",
+      description: "Could not reach Productive.",
+    },
+  );
+});
+
+QUnit.test("copyDayFailed uses the error message", (assert) => {
+  assert.deepEqual(
+    copyForNotice({
+      kind: "copyDayFailed",
+      message: "Could not reach Productive.",
+    }),
+    {
+      level: "detail",
+      title: "Couldn't copy the previous day",
       description: "Could not reach Productive.",
     },
   );

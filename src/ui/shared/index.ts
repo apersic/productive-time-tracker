@@ -6,3 +6,4 @@ export * from "./header";
 export * from "./person-chip";
 export * from "./note-editor";
 export * from "./service-field";
+export * from "./calendar-day-picker";

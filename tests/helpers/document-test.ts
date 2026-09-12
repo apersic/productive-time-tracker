@@ -1,4 +1,5 @@
 import QUnit from "qunit";
+import { contentSecurityPolicy } from "../../src/lib/document/csp.ts";
 import { documentTitle, pageHeading } from "../../src/lib/document/page.ts";
 import { robotsTxt, shellHead } from "../../src/lib/document/shell.ts";
 
@@ -100,3 +101,21 @@ QUnit.test("shellHead crawler tags", (assert) => {
 QUnit.test("robotsTxt disallows all crawlers", (assert) => {
   assert.equal(robotsTxt(), "User-agent: *\nDisallow: /\n");
 });
+
+QUnit.test(
+  "meta CSP omits frame-ancestors and the header keeps it",
+  (assert) => {
+    const policy = contentSecurityPolicy({
+      apiOrigin: "https://api.productive.io",
+      development: false,
+    });
+    assert.equal(
+      policy.header,
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.productive.io; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+    );
+    assert.equal(
+      policy.meta,
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://api.productive.io; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'",
+    );
+  },
+);

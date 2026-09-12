@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import type { Credentials, PersonId } from "../../../lib/auth/session.ts";
 import { debounce, type DebouncedFn } from "../../../lib/helpers/debounce.ts";
 import { fetchServiceCatalog } from "../../../providers/productive/services-service.ts";
@@ -45,6 +45,7 @@ export function useServicePicker(args: {
     initialPickerState,
   );
   const argsRef = useRef(args);
+  argsRef.current = args;
   const generationRef = useRef(state.searchGeneration);
   const searchDebouncedRef = useRef<DebouncedFn<[string, number]> | undefined>(
     undefined,
@@ -54,10 +55,6 @@ export function useServicePicker(args: {
   const pinnedId =
     args.context.kind === "ready" ? args.context.pinned?.id : undefined;
   const dayRef = useRef(day);
-
-  useEffect(() => {
-    argsRef.current = args;
-  }, [args]);
 
   useEffect(() => {
     generationRef.current = state.searchGeneration;
@@ -188,17 +185,37 @@ export function useServicePicker(args: {
     dispatch({ kind: "resetRequested" });
   }, []);
 
-  return {
-    availability: availabilityFrom(state.base, state.context),
-    selected: state.selection,
-    query: state.input,
-    listing: listingFrom(state),
-    lifecycle: state.lifecycle,
-    setQuery,
-    toggleGroup,
-    select,
-    open,
-    close,
-    reset,
-  };
+  const availability = useMemo(
+    () => availabilityFrom(state.base, state.context),
+    [state.base, state.context],
+  );
+  const listing = useMemo(() => listingFrom(state), [state]);
+  return useMemo(
+    () => ({
+      availability,
+      selected: state.selection,
+      query: state.input,
+      listing,
+      lifecycle: state.lifecycle,
+      setQuery,
+      toggleGroup,
+      select,
+      open,
+      close,
+      reset,
+    }),
+    [
+      availability,
+      state.selection,
+      state.input,
+      listing,
+      state.lifecycle,
+      setQuery,
+      toggleGroup,
+      select,
+      open,
+      close,
+      reset,
+    ],
+  );
 }

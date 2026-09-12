@@ -1,17 +1,26 @@
 import {
   Button,
   Field,
+  Flex,
   Input,
   InputGroup,
   Skeleton,
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { useState, type ReactElement, type SubmitEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactElement,
+  type SubmitEvent,
+} from "react";
 import {
   durationFieldIssue,
   FieldWarning,
   fieldIssueMessage,
+  focusFirstInvalid,
   presenceIssue,
   type FieldIssue,
 } from "../../lib/forms";
@@ -23,16 +32,27 @@ import {
   type DurationDraft,
 } from "../../lib/time/duration.ts";
 import {
+  noteIdentity,
   parseEntryDraft,
   type EntryDraft,
   type EntryFields,
+  type EntryNote,
   type ServicePicker,
   type ServicesList,
   type TrackableService,
 } from "../../features/timesheet";
+import type { CalendarDay } from "../../lib/time/calendar-day.ts";
+import { CalendarDayPicker } from "./calendar-day-picker.tsx";
 import { Card } from "./card.tsx";
 import { NoteEditor } from "./note-editor.tsx";
 import { ServiceField } from "./service-field.tsx";
+
+export type EntryDayControl = {
+  readonly value: CalendarDay;
+  select: (day: CalendarDay) => void;
+};
+
+const DURATION_HINT = "Minutes or hh:mm, like 90 or 1:30";
 
 export function EntryFormSkeleton(): ReactElement {
   return (
@@ -109,14 +129,29 @@ function formDisabled(args: {
   }
 }
 
+function loadingStatus(args: {
+  blocked: boolean;
+  availability: ServicesList;
+}): string | undefined {
+  if (args.availability.status === "loading") {
+    return "Loading services";
+  }
+  if (args.blocked) {
+    return "Loading time entries";
+  }
+  return undefined;
+}
+
 export function EntryForm(props: {
   initial: EntryFields;
+  day?: EntryDayControl;
   submitLabel: string;
   picker: ServicePicker;
   submitting: boolean;
   blocked: boolean;
   error: string | undefined;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const [duration, setDuration] = useState(props.initial.duration);
   const [spoken, setSpoken] = useState(() =>
@@ -129,6 +164,10 @@ export function EntryForm(props: {
   const [serviceIssue, setServiceIssue] = useState<FieldIssue | undefined>(
     undefined,
   );
+  const [submitFailed, setSubmitFailed] = useState(false);
+  const summaryId = useId();
+  const dirtyRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const availability = props.picker.availability;
   const selectVisible = showServiceSelect(availability);
@@ -138,6 +177,51 @@ export function EntryForm(props: {
     availability,
     selected: props.picker.selected,
   });
+  const pendingStatus = loadingStatus({
+    blocked: props.blocked,
+    availability,
+  });
+  const busy = pendingStatus !== undefined || props.submitting;
+
+  function publishDirty(next: {
+    duration?: string;
+    note?: EntryNote;
+    serviceId?: string;
+  }) {
+    const report = props.onDirtyChange;
+    if (!report) {
+      return;
+    }
+    const dirty =
+      (next.duration ?? duration) !== props.initial.duration ||
+      noteIdentity(next.note ?? note) !== noteIdentity(props.initial.note) ||
+      (next.serviceId ?? props.picker.selected?.id ?? "") !==
+        (props.initial.service?.id ?? "");
+    dirtyRef.current = dirty;
+    report(dirty);
+  }
+
+  useEffect(() => {
+    publishDirty({});
+  }, [
+    duration,
+    note,
+    props.initial.duration,
+    props.initial.note,
+    props.initial.service?.id,
+    props.onDirtyChange,
+    props.picker.selected?.id,
+  ]);
+
+  useEffect(() => {
+    if (!submitFailed) {
+      return;
+    }
+    const form = formRef.current;
+    if (form) {
+      focusFirstInvalid(form);
+    }
+  }, [submitFailed, durationIssue, serviceIssue]);
 
   function commitService(service: TrackableService | undefined): boolean {
     const issue = presenceIssue(service?.id ?? "");
@@ -151,6 +235,7 @@ export function EntryForm(props: {
     setNote(props.initial.note);
     setDurationIssue(undefined);
     setServiceIssue(undefined);
+    setSubmitFailed(false);
     props.picker.reset();
   }
 
@@ -203,18 +288,31 @@ export function EntryForm(props: {
     if (!parsed.ok) {
       setDurationIssue(parsed.issues.duration);
       setServiceIssue(parsed.issues.service);
+      setSubmitFailed(true);
       return;
     }
+    setSubmitFailed(false);
+    const leavingDirty = dirtyRef.current;
+    props.onDirtyChange?.(false);
     const ok = await props.onSubmit(parsed.draft);
     if (ok) {
       resetForm();
+    } else if (leavingDirty) {
+      props.onDirtyChange?.(true);
     }
   }
 
   return (
-    <form noValidate onSubmit={(event) => void onSubmit(event)}>
+    <form
+      ref={formRef}
+      noValidate
+      aria-busy={busy || undefined}
+      aria-describedby={submitFailed ? summaryId : undefined}
+      onSubmit={(event) => void onSubmit(event)}
+    >
       <Card>
         <Stack gap="4">
+          {pendingStatus ? <Text role="status">{pendingStatus}</Text> : null}
           {availability.status === "none" ? (
             <Text color="fg.error">
               No services are available for time tracking.
@@ -225,6 +323,18 @@ export function EntryForm(props: {
               {availability.error.message}
             </Text>
           ) : null}
+          {props.day ? (
+            // Changing day refetches services. formDisabled is true while that
+            // loads, so this row keys off submitting only.
+            <Field.Root disabled={props.submitting} width="full">
+              <CalendarDayPicker
+                label="Date"
+                value={props.day.value}
+                onChange={props.day.select}
+                disabled={props.submitting}
+              />
+            </Field.Root>
+          ) : null}
           {selectVisible ? (
             <ServiceField
               picker={props.picker}
@@ -232,34 +342,39 @@ export function EntryForm(props: {
               disabled={disabled}
               onSelect={(service) => {
                 commitService(service);
+                publishDirty({ serviceId: service.id });
               }}
             />
           ) : null}
           <Field.Root
             required
             invalid={durationIssue !== undefined}
+            disabled={disabled}
             width="full"
           >
             <Field.Label>Duration</Field.Label>
             <InputGroup
               width="full"
               endElement={
-                durationIssue ? (
-                  <FieldWarning message={fieldIssueMessage(durationIssue)} />
-                ) : (
-                  <Text color="fg.muted" whiteSpace="nowrap">
+                <Flex align="center" gap="1">
+                  <Text aria-hidden color="fg.muted" whiteSpace="nowrap">
                     {spoken}
                   </Text>
-                )
+                  {durationIssue ? <FieldWarning /> : null}
+                </Flex>
               }
             >
               <Input
                 name="duration"
                 width="full"
                 value={duration}
+                inputMode="numeric"
+                disabled={disabled}
                 onChange={(event) => {
-                  setDuration(event.target.value);
+                  const value = event.target.value;
+                  setDuration(value);
                   setDurationIssue(undefined);
+                  publishDirty({ duration: value });
                 }}
                 onBlur={() => {
                   commitDuration(duration);
@@ -268,16 +383,31 @@ export function EntryForm(props: {
                 autoComplete="off"
               />
             </InputGroup>
+            <Field.HelperText>{DURATION_HINT}</Field.HelperText>
+            {durationIssue ? (
+              <Field.ErrorText>
+                {fieldIssueMessage(durationIssue)}
+              </Field.ErrorText>
+            ) : null}
           </Field.Root>
-          <Field.Root>
+          <Field.Root disabled={disabled}>
             <Field.Label>Description</Field.Label>
             <NoteEditor
               value={note}
-              onChange={setNote}
+              onChange={(next) => {
+                setNote(next);
+                publishDirty({ note: next });
+              }}
               disabled={disabled}
               placeholder="Enter a description"
             />
+            <Field.HelperText>Enter a description</Field.HelperText>
           </Field.Root>
+          {submitFailed ? (
+            <Text id={summaryId} color="fg.error" role="alert">
+              Fix the highlighted fields.
+            </Text>
+          ) : null}
           {props.error ? (
             <Text color="fg.error" role="alert">
               {props.error}

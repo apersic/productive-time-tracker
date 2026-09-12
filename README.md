@@ -2,7 +2,7 @@
 
 A React app that runs in the browser. You log in with a Productive API token and organization ID, then manage time entries for one day.
 
-Each new entry has duration, date, and a multiline description. The person on the entry is the logged-in user. You can create an entry, list the entries for the selected day, edit an entry, and delete an entry.
+Each new entry has duration, a service, and a multiline note. Edit can also change the date. The person on the entry is the logged-in user. You can create an entry, list the entries for the selected day, start and stop a timer, edit an entry, delete an entry, and copy tasks from the previous day.
 
 Frontend architecture, UI components, Productive API usage, and documented assumptions are in [specification.md](specification.md).
 
@@ -33,4 +33,4 @@ Run these from the repo root:
 - `npm run build` type-checks and writes `dist/`.
 - `npm run test:e2e` installs Playwright's Chromium browsers if they are missing, then runs Playwright against `/`.
 
-On your machine, Playwright starts `npm run dev`. In CI it starts `npm run preview` after `npm run build`. The first local `npm run test:e2e` downloads browser binaries. Guest redirect, mocked login, and restore behavior run without secrets. The live Productive login test reads `ORGANIZATION_ID` and `VITE_ACCESS_TOKEN` from `.env` when that file exists.
+On your machine, Playwright starts `npm run dev`. In CI it starts `npm run preview` after `npm run build`. The first local `npm run test:e2e` downloads browser binaries. Guest redirect, mocked login, and restore behavior run without secrets.

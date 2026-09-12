@@ -33,6 +33,7 @@ import {
   type TimeEntryId,
   type TimerControl,
 } from "../../features/timesheet";
+import { SITE_ICON_HREF } from "../../lib/document";
 import { formatCalendarDayLabel } from "../../lib/time/calendar-day.ts";
 import { formatHhMm } from "../../lib/time/duration.ts";
 import { Card } from "../shared";
@@ -46,12 +47,12 @@ type ListOverlay =
 
 const LIST_PENDING_NAME = "Loading time entries";
 const LIST_PLACEHOLDER_COUNT = 3;
+const ROW_CONTROL_SIZE = "11";
 
 export function DayEntryListSkeleton(): ReactElement {
   return (
     <Stack
       gap="3"
-      maxH="70vh"
       overflowY="hidden"
       role="status"
       aria-busy="true"
@@ -90,8 +91,8 @@ function copyButtonVisible(timesheet: DayTimesheet): boolean {
     case "available":
     case "failed":
     case "copying":
-      return true;
     case "checking":
+      return true;
     case "unavailable":
       return false;
     default: {
@@ -101,10 +102,28 @@ function copyButtonVisible(timesheet: DayTimesheet): boolean {
   }
 }
 
+function listAnnouncement(timesheet: DayTimesheet): string {
+  const day = formatCalendarDayLabel(timesheet.day);
+  switch (timesheet.entries.status) {
+    case "loading":
+      return `Loading time entries for ${day}`;
+    case "failed":
+      return timesheet.entries.error.message;
+    case "empty":
+      return `No tracked time for ${day}`;
+    case "ready":
+      return `${timesheet.entries.rows.length} time entries for ${day}`;
+    default: {
+      const _exhaustive: never = timesheet.entries;
+      return _exhaustive;
+    }
+  }
+}
+
 function entryNoteView(note: EntryNote) {
   switch (note.kind) {
     case "empty":
-      return null;
+      return "-";
     case "present":
       return <NoteView note={note} />;
     default: {
@@ -144,6 +163,7 @@ function overlayTitle(overlay: ListOverlay): string {
 
 function EntryMoreMenu(props: {
   entry: TimeEntry;
+  title: string;
   timesheet: DayTimesheet;
   onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
@@ -168,8 +188,10 @@ function EntryMoreMenu(props: {
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          aria-label="More"
+          size="md"
+          minW={ROW_CONTROL_SIZE}
+          minH={ROW_CONTROL_SIZE}
+          aria-label={`More actions for ${props.title}`}
           px="0"
         >
           <MoreIcon />
@@ -207,6 +229,7 @@ function EntryDeleteDialog(props: {
 }) {
   const open = overlayIsOpen(props.overlay);
   const deleting = props.overlay.kind === "deleting";
+  const title = overlayTitle(props.overlay);
   return (
     <Dialog.Root
       role="alertdialog"
@@ -228,7 +251,9 @@ function EntryDeleteDialog(props: {
             <Dialog.Header>
               <Dialog.Title>Delete this time entry?</Dialog.Title>
             </Dialog.Header>
-            <Dialog.Body>{overlayTitle(props.overlay)}</Dialog.Body>
+            <Dialog.Body>
+              <Dialog.Description>{title}</Dialog.Description>
+            </Dialog.Body>
             <Dialog.Footer>
               <Button
                 type="button"
@@ -246,7 +271,7 @@ function EntryDeleteDialog(props: {
                 loading={deleting}
                 disabled={deleting}
               >
-                Confirm
+                Delete entry
               </Button>
             </Dialog.Footer>
           </Dialog.Content>
@@ -282,7 +307,7 @@ function EntryRow(props: {
       <Flex align="flex-start" justify="space-between" gap="4">
         <Stack flex="1" gap="3" minW="0">
           <Stack gap="1">
-            <Heading as="h2" size="sm" lineClamp={2}>
+            <Heading as="h3" size="sm" lineClamp={2}>
               {listing.title}
             </Heading>
             {listing.subtitle ? (
@@ -298,6 +323,7 @@ function EntryRow(props: {
             {formatHhMm(shown)}
           </Text>
           <TimerButton
+            title={listing.title}
             control={timerControl({
               entryId: props.entry.id,
               timer: props.timesheet.timer,
@@ -307,6 +333,7 @@ function EntryRow(props: {
           />
           <EntryMoreMenu
             entry={props.entry}
+            title={listing.title}
             timesheet={props.timesheet}
             onEdit={props.onEdit}
             onDelete={props.onDelete}
@@ -317,12 +344,12 @@ function EntryRow(props: {
   );
 }
 
-function timerLabel(kind: TimerControl["kind"]): "Play" | "Stop" {
+function timerActionLabel(kind: TimerControl["kind"], title: string): string {
   switch (kind) {
     case "play":
-      return "Play";
+      return `Start timer for ${title}`;
     case "stop":
-      return "Stop";
+      return `Stop timer for ${title}`;
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -352,19 +379,23 @@ function timerGlyph(kind: TimerControl["kind"]): ReactElement {
 }
 
 function TimerButton(props: {
+  title: string;
   control: TimerControl;
   onPlay: () => void;
   onPause: () => void;
 }): ReactElement {
   const { control } = props;
+  const label = timerActionLabel(control.kind, props.title);
   switch (control.mode) {
     case "pending":
       return (
         <Button
           type="button"
-          size="sm"
+          size="md"
           variant="outline"
-          aria-label={timerLabel(control.kind)}
+          minW={ROW_CONTROL_SIZE}
+          minH={ROW_CONTROL_SIZE}
+          aria-label={label}
           loading
           px="0"
         >
@@ -377,9 +408,11 @@ function TimerButton(props: {
           return (
             <Button
               type="button"
-              size="sm"
+              size="md"
               variant="outline"
-              aria-label={timerLabel(control.kind)}
+              minW={ROW_CONTROL_SIZE}
+              minH={ROW_CONTROL_SIZE}
+              aria-label={label}
               disabled={!control.enabled}
               onClick={props.onPlay}
               px="0"
@@ -391,9 +424,11 @@ function TimerButton(props: {
           return (
             <Button
               type="button"
-              size="sm"
+              size="md"
               variant="outline"
-              aria-label={timerLabel(control.kind)}
+              minW={ROW_CONTROL_SIZE}
+              minH={ROW_CONTROL_SIZE}
+              aria-label={label}
               disabled={!control.enabled}
               onClick={props.onPause}
               px="0"
@@ -450,7 +485,7 @@ function ReadyList(props: {
     if (!last || page.kind !== "more") {
       return;
     }
-    if (last.index >= rows.length - 9) {
+    if (last.index >= rows.length - 1) {
       onLoadMore();
     }
   }, [last, last?.index, page.kind, rows.length, onLoadMore]);
@@ -458,8 +493,12 @@ function ReadyList(props: {
   return (
     <Box
       ref={parentRef}
-      maxH="70vh"
+      flex="1"
+      minH="0"
       overflowY="auto"
+      tabIndex={0}
+      role="list"
+      aria-label={`Time entries for ${formatCalendarDayLabel(timesheet.day)}`}
       css={{ scrollBehavior: "auto" }}
     >
       <Box
@@ -475,6 +514,9 @@ function ReadyList(props: {
           return (
             <Box
               key={virtualRow.key}
+              role="listitem"
+              aria-setsize={rows.length}
+              aria-posinset={virtualRow.index + 1}
               data-index={virtualRow.index}
               data-entry-id={entry.id}
               ref={virtualizer.measureElement}
@@ -510,23 +552,33 @@ function LoadMoreFooter(props: {
   if (!control.visible) {
     return null;
   }
-  return (
-    <Stack gap="2">
-      {control.error ? (
-        <Text color="fg.error" role="alert">
-          {control.error}
+  switch (control.kind) {
+    case "status":
+      return (
+        <Text
+          role="status"
+          aria-label="Loading more entries"
+          aria-live="polite"
+        >
+          Loading more entries
         </Text>
-      ) : null}
-      <Button
-        type="button"
-        variant="outline"
-        loading={control.pending}
-        onClick={props.onLoadMore}
-      >
-        {control.label}
-      </Button>
-    </Stack>
-  );
+      );
+    case "retry":
+      return (
+        <Stack gap="2">
+          <Text color="fg.error" role="alert">
+            {control.error}
+          </Text>
+          <Button type="button" variant="outline" onClick={props.onLoadMore}>
+            Retry
+          </Button>
+        </Stack>
+      );
+    default: {
+      const _exhaustive: never = control;
+      return _exhaustive;
+    }
+  }
 }
 
 export function DayEntryList(props: {
@@ -541,6 +593,7 @@ export function DayEntryList(props: {
 }) {
   const { timesheet } = props;
   const [overlay, setOverlay] = useState<ListOverlay>({ kind: "closed" });
+  const regionRef = useRef<HTMLDivElement>(null);
 
   function requestDelete(entry: TimeEntry) {
     setOverlay({
@@ -569,6 +622,7 @@ export function DayEntryList(props: {
     setOverlay({ kind: "deleting", entryId, title });
     await props.onRemove(entryId);
     setOverlay({ kind: "closed" });
+    regionRef.current?.focus();
   }
 
   let body;
@@ -585,32 +639,62 @@ export function DayEntryList(props: {
       break;
     case "empty":
       body = (
-        <Stack gap="4">
-          <Text>
-            There's no tracked time for {formatCalendarDayLabel(timesheet.day)}
-          </Text>
-          {copyButtonVisible(timesheet) ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={props.onCopyPreviousDay}
-              loading={timesheet.entries.copy.kind === "copying"}
-              disabled={timesheet.entries.copy.kind === "copying"}
-            >
-              Copy tasks from previous day
-            </Button>
-          ) : null}
-          {timesheet.entries.copy.kind === "failed" ? (
-            <Text color="fg.error" role="alert">
-              {timesheet.entries.copy.error.message}
-            </Text>
-          ) : null}
-        </Stack>
+        <Card>
+          <Stack
+            align="center"
+            justify="center"
+            gap="4"
+            textAlign="center"
+            role="status"
+          >
+            <img
+              src={SITE_ICON_HREF}
+              alt=""
+              aria-hidden={true}
+              width={48}
+              height={48}
+            />
+            <Heading as="h2" size="md">
+              There's no tracked time for{" "}
+              {formatCalendarDayLabel(timesheet.day)}
+            </Heading>
+            {timesheet.entries.copy.kind === "unavailable" ? (
+              <Text>Add a time entry to start this day.</Text>
+            ) : null}
+            {copyButtonVisible(timesheet) ? (
+              <Button
+                type="button"
+                colorPalette="blue"
+                variant="solid"
+                alignSelf="center"
+                onClick={props.onCopyPreviousDay}
+                loading={
+                  timesheet.entries.copy.kind === "copying" ||
+                  timesheet.entries.copy.kind === "checking"
+                }
+                disabled={
+                  timesheet.entries.copy.kind === "copying" ||
+                  timesheet.entries.copy.kind === "checking"
+                }
+              >
+                Copy tasks from previous day
+              </Button>
+            ) : null}
+            {timesheet.entries.copy.kind === "failed" ? (
+              <Text color="fg.error" role="alert">
+                {timesheet.entries.copy.error.message}
+              </Text>
+            ) : null}
+          </Stack>
+        </Card>
       );
       break;
     case "ready":
       body = (
-        <Stack gap="3">
+        <Stack gap="3" flex="1" minH="0">
+          <Heading as="h2" size="md" flexShrink="0">
+            Time entries for {formatCalendarDayLabel(timesheet.day)}
+          </Heading>
           <ReadyList
             rows={timesheet.entries.rows}
             page={timesheet.entries.page}
@@ -636,7 +720,21 @@ export function DayEntryList(props: {
   }
 
   return (
-    <>
+    <Box
+      ref={regionRef}
+      tabIndex={-1}
+      outline="none"
+      role="region"
+      aria-label="Time entries"
+      flex="1"
+      minH="0"
+      display="flex"
+      flexDirection="column"
+      overflow="hidden"
+    >
+      <Box className="sr-only" aria-live="polite" aria-atomic="true">
+        {listAnnouncement(timesheet)}
+      </Box>
       {body}
       <EntryDeleteDialog
         overlay={overlay}
@@ -645,6 +743,6 @@ export function DayEntryList(props: {
           void confirmDelete();
         }}
       />
-    </>
+    </Box>
   );
 }

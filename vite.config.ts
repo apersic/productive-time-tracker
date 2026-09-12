@@ -1,6 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, type Plugin } from "vite";
+import { contentSecurityPolicy } from "./src/lib/document/csp.ts";
 import {
   robotsTxt,
   shellHead,
@@ -15,35 +16,11 @@ function originFromBaseUrl(baseUrl: string): string {
   }
 }
 
-function contentSecurityPolicy(args: {
-  apiOrigin: string;
-  development: boolean;
-}): string {
-  const scriptSrc = args.development
-    ? "script-src 'self' 'unsafe-eval' 'unsafe-inline'"
-    : "script-src 'self'";
-  const connectSrc = args.development
-    ? `connect-src 'self' ws: wss: ${args.apiOrigin}`
-    : `connect-src 'self' ${args.apiOrigin}`;
-  return [
-    "default-src 'self'",
-    scriptSrc,
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
-    connectSrc,
-    "font-src 'self'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-  ].join("; ");
-}
-
 function contentSecurityPolicyPlugin(args: {
   apiOrigin: string;
   development: boolean;
 }): Plugin {
-  const content = contentSecurityPolicy(args);
+  const policy = contentSecurityPolicy(args);
   return {
     name: "content-security-policy",
     transformIndexHtml() {
@@ -52,7 +29,7 @@ function contentSecurityPolicyPlugin(args: {
           tag: "meta",
           attrs: {
             "http-equiv": "Content-Security-Policy",
-            content,
+            content: policy.meta,
           },
           injectTo: "head",
         },
@@ -60,13 +37,13 @@ function contentSecurityPolicyPlugin(args: {
     },
     configureServer(server) {
       server.middlewares.use((_req, res, next) => {
-        res.setHeader("Content-Security-Policy", content);
+        res.setHeader("Content-Security-Policy", policy.header);
         next();
       });
     },
     configurePreviewServer(server) {
       server.middlewares.use((_req, res, next) => {
-        res.setHeader("Content-Security-Policy", content);
+        res.setHeader("Content-Security-Policy", policy.header);
         next();
       });
     },

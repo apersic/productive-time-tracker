@@ -5,6 +5,7 @@ import {
   catalogWithPinned,
   openedByDefault,
   serviceAvailability,
+  serviceGroupId,
   toggleExpansion,
   type Expansion,
   type ServiceCatalog,
@@ -124,28 +125,48 @@ function contextPinned(context: PickerContext): TrackableService | undefined {
   }
 }
 
-function browseExpansion(catalog: ServiceCatalog): Expansion {
-  return { mode: "collapsed", opened: openedByDefault(catalog) };
+function browseExpansion(
+  catalog: ServiceCatalog,
+  pinned: TrackableService | undefined,
+): Expansion {
+  const display = catalogWithPinned({ catalog, pinned });
+  const opened = new Set(openedByDefault(display));
+  const pinId = serviceGroupId(["pinned"]);
+  if (display.roots[0]?.kind === "group" && display.roots[0].id === pinId) {
+    opened.add(pinId);
+  }
+  return { mode: "collapsed", opened };
 }
 
-function expansionForBase(base: BaseCatalog): Expansion {
-  switch (base.kind) {
+function expansionForState(state: ServicePickerState): Expansion {
+  switch (state.base.kind) {
     case "idle":
     case "loading":
     case "failed":
       return { mode: "collapsed", opened: new Set() };
     case "ready":
-      return browseExpansion(base.catalog);
+      return browseExpansion(state.base.catalog, contextPinned(state.context));
     default: {
-      const _exhaustive: never = base;
+      const _exhaustive: never = state.base;
       return _exhaustive;
     }
   }
 }
 
+function displayCatalog(
+  catalog: ServiceCatalog,
+  context: PickerContext,
+): ServiceCatalog {
+  return catalogWithPinned({
+    catalog,
+    pinned: contextPinned(context),
+  });
+}
+
 function shownCatalog(
   search: SearchState,
   base: BaseCatalog,
+  context: PickerContext,
 ): ServiceCatalog | undefined {
   switch (search.kind) {
     case "off":
@@ -155,7 +176,7 @@ function shownCatalog(
         case "failed":
           return undefined;
         case "ready":
-          return base.catalog;
+          return displayCatalog(base.catalog, context);
         default: {
           const _exhaustive: never = base;
           return _exhaustive;
@@ -164,9 +185,11 @@ function shownCatalog(
     case "typing":
     case "fetching":
     case "failed":
-      return search.previous;
+      return search.previous === undefined
+        ? undefined
+        : displayCatalog(search.previous, context);
     case "ready":
-      return search.catalog;
+      return displayCatalog(search.catalog, context);
     default: {
       const _exhaustive: never = search;
       return _exhaustive;
@@ -244,7 +267,7 @@ export function listingFrom(state: ServicePickerState): ServiceListing {
         return { kind: "loading" };
       }
       const rows = catalogRows({
-        catalog: previous,
+        catalog: displayCatalog(previous, state.context),
         expansion: state.expansion,
         selected,
       });
@@ -254,13 +277,14 @@ export function listingFrom(state: ServicePickerState): ServiceListing {
       return { kind: "rows", rows, stale: true };
     }
     case "ready": {
-      if (state.search.catalog.serviceCount === 0) {
+      const catalog = displayCatalog(state.search.catalog, state.context);
+      if (catalog.serviceCount === 0) {
         return { kind: "empty", reason: "noMatches" };
       }
       return {
         kind: "rows",
         rows: catalogRows({
-          catalog: state.search.catalog,
+          catalog,
           expansion: state.expansion,
           selected,
         }),
@@ -271,7 +295,7 @@ export function listingFrom(state: ServicePickerState): ServiceListing {
       const previous = state.search.previous;
       const rows = previous
         ? catalogRows({
-            catalog: previous,
+            catalog: displayCatalog(previous, state.context),
             expansion: state.expansion,
             selected,
           })
@@ -390,7 +414,9 @@ function reduceContextChanged(
     input: "",
     search: { kind: "off" },
     expansion: { mode: "collapsed", opened: new Set() },
-    selection: context.kind === "ready" ? context.pinned : undefined,
+    selection:
+      state.selection ??
+      (context.kind === "ready" ? context.pinned : undefined),
     searchGeneration: state.searchGeneration + 1,
   };
 }
@@ -418,7 +444,7 @@ function reduceBaseArrived(
     search: backfillPrevious(state.search, event.catalog),
     expansion:
       state.search.kind === "off"
-        ? browseExpansion(event.catalog)
+        ? browseExpansion(event.catalog, contextPinned(state.context))
         : state.expansion,
   };
 }
@@ -443,7 +469,7 @@ function reduceInputChanged(
       ...state,
       input,
       search: { kind: "off" },
-      expansion: expansionForBase(state.base),
+      expansion: expansionForState(state),
     };
   }
   return {
@@ -451,7 +477,7 @@ function reduceInputChanged(
     input,
     search: {
       kind: "typing",
-      previous: shownCatalog(state.search, state.base),
+      previous: shownCatalog(state.search, state.base, state.context),
     },
   };
 }
@@ -470,7 +496,7 @@ function reduceSearchRequested(
     ...state,
     search: {
       kind: "fetching",
-      previous: shownCatalog(state.search, state.base),
+      previous: shownCatalog(state.search, state.base, state.context),
     },
   };
 }
@@ -504,7 +530,7 @@ function reduceSearchFailed(
     search: {
       kind: "failed",
       error: event.error,
-      previous: shownCatalog(state.search, state.base),
+      previous: shownCatalog(state.search, state.base, state.context),
     },
   };
 }
@@ -516,7 +542,7 @@ function reduceClosed(state: ServicePickerState): ServicePickerState {
     searchGeneration: state.searchGeneration + 1,
     input: "",
     search: { kind: "off" },
-    expansion: expansionForBase(state.base),
+    expansion: expansionForState(state),
   };
 }
 
@@ -525,7 +551,7 @@ function reduceReset(state: ServicePickerState): ServicePickerState {
     ...state,
     input: "",
     search: { kind: "off" },
-    expansion: expansionForBase(state.base),
+    expansion: expansionForState(state),
     selection:
       state.context.kind === "ready" ? state.context.pinned : undefined,
     lifecycle: { kind: "closed" },

@@ -47,31 +47,11 @@ test.describe("crawler shell", () => {
 
     const html = await page.content();
     expect(html).toMatch(/img-src 'self' data:/);
+    expect(html).not.toContain("frame-ancestors");
     expect(html).not.toContain("canonical");
     expect(html).not.toContain("og:url");
     expect(html).not.toContain("application/ld+json");
   });
-});
-
-test("login sets the tab title and a single h1", async ({ page }) => {
-  await page.goto("/login");
-  await expect(page).toHaveTitle("Log in · Productive Time Tracker");
-  await expect(page.getByRole("heading", { name: "Log in" })).toBeVisible();
-  await expect(page.locator("head title")).toHaveCount(1);
-  await expect(page.locator("h1")).toHaveCount(1);
-});
-
-test("home sets the tab title", async ({ page }) => {
-  await mockProductiveIdentity(page);
-  await mockServices(page);
-  await mockTimers(page);
-  await mockTimeEntries(page, () => ({
-    data: [jsonApiTimeEntry()],
-    included: [jsonApiService()],
-  }));
-  await openHome(page);
-  await expect(page).toHaveTitle("Home · Productive Time Tracker");
-  await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 });
 
 test("edit title stays generic and hides entry copy", async ({ page }) => {
@@ -79,39 +59,14 @@ test("edit title stays generic and hides entry copy", async ({ page }) => {
   await mockServices(page);
   await mockTimers(page);
   await mockTimeEntries(page, () => ({
-    data: [jsonApiTimeEntry("entry-1", { note: "SECRET-NOTE" })],
+    data: [jsonApiTimeEntry("entry-1")],
     included: [jsonApiService()],
   }));
   await openHome(page);
-  await page.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveTitle("Edit time entry · Productive Time Tracker");
   await expect(
     page.getByRole("heading", { name: "Edit time entry" }),
   ).toBeVisible();
-  const title = await page.title();
-  expect(title).not.toContain("SECRET-NOTE");
-  expect(title).not.toContain("Ada Lovelace");
-});
-
-test("unknown route still has a page title", async ({ page }) => {
-  await page.goto("/nope");
-  await expect(page).toHaveTitle(/^(Log in|Home) · Productive Time Tracker$/);
-});
-
-test("client-side navigation updates the tab title", async ({ page }) => {
-  await mockProductiveIdentity(page);
-  await mockServices(page);
-  await mockTimers(page);
-  await mockTimeEntries(page, () => ({
-    data: [jsonApiTimeEntry()],
-    included: [jsonApiService()],
-  }));
-  await openHome(page);
-  await expect(page).toHaveTitle("Home · Productive Time Tracker");
-  await page.getByRole("button", { name: "More" }).click();
-  await page.getByRole("menuitem", { name: "Edit" }).click();
-  await expect(page).toHaveTitle("Edit time entry · Productive Time Tracker");
-  await page.getByRole("link", { name: "Back" }).click();
-  await expect(page).toHaveTitle("Home · Productive Time Tracker");
 });

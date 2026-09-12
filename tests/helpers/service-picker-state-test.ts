@@ -3,6 +3,7 @@ import { parseCalendarDay } from "../../src/lib/time";
 import {
   emptyServiceCatalog,
   parseServiceId,
+  serviceGroupId,
   type ServiceCatalog,
 } from "../../src/features/timesheet";
 import {
@@ -172,6 +173,23 @@ QUnit.test("select stores the full TrackableService", (assert) => {
   assert.deepEqual(state.selection, { id: serviceId("svc-2"), name: "Design" });
 });
 
+QUnit.test("day change keeps the current selection", (assert) => {
+  let state = initialPickerState({
+    kind: "ready",
+    day: monday,
+    pinned: development,
+  });
+  state = servicePickerReducer(state, {
+    kind: "selected",
+    service: design,
+  });
+  state = servicePickerReducer(state, {
+    kind: "contextChanged",
+    context: { kind: "ready", day: tuesday, pinned: development },
+  });
+  assert.deepEqual(state.selection, design);
+});
+
 QUnit.test(
   "day change bumps searchGeneration and drops the pending query",
   (assert) => {
@@ -263,5 +281,133 @@ QUnit.test(
       ],
       stale: true,
     });
+  },
+);
+
+QUnit.test("search expands groups so a nested match is listed", (assert) => {
+  const nested: ServiceCatalog = {
+    roots: [
+      {
+        kind: "group",
+        id: serviceGroupId(["company:c1"]),
+        level: "company",
+        label: "Co",
+        children: [
+          {
+            kind: "group",
+            id: serviceGroupId(["company:c1", "deal:d1"]),
+            level: "deal",
+            label: "Deal",
+            children: [{ kind: "service", service: design }],
+          },
+        ],
+      },
+    ],
+    serviceCount: 1,
+  };
+  let state = initialPickerState({
+    kind: "ready",
+    day: monday,
+    pinned: undefined,
+  });
+  state = servicePickerReducer(state, {
+    kind: "baseArrived",
+    day: monday,
+    catalog: nested,
+  });
+  const before = listingFrom(state);
+  assert.equal(before.kind, "rows");
+  if (before.kind === "rows") {
+    assert.deepEqual(
+      before.rows
+        .filter((row) => row.kind === "service")
+        .map((row) => {
+          return row.kind === "service" ? row.service.name : "";
+        }),
+      [],
+    );
+  }
+  state = servicePickerReducer(state, {
+    kind: "inputChanged",
+    input: "Des",
+  });
+  state = servicePickerReducer(state, {
+    kind: "searchArrived",
+    query: "Des",
+    catalog: nested,
+    generation: state.searchGeneration,
+  });
+  const after = listingFrom(state);
+  assert.equal(after.kind, "rows");
+  if (after.kind !== "rows") {
+    return;
+  }
+  assert.deepEqual(
+    after.rows
+      .filter((row) => row.kind === "service")
+      .map((row) => (row.kind === "service" ? row.service.name : "")),
+    ["Design"],
+  );
+});
+
+QUnit.test(
+  "a pinned service missing from the catalog opens the Current service group",
+  (assert) => {
+    const pinned = { id: serviceId("svc-old"), name: "Old" };
+    let state = initialPickerState({
+      kind: "ready",
+      day: monday,
+      pinned,
+    });
+    state = servicePickerReducer(state, {
+      kind: "baseArrived",
+      day: monday,
+      catalog: emptyServiceCatalog,
+    });
+    const listing = listingFrom(state);
+    assert.equal(listing.kind, "rows");
+    if (listing.kind !== "rows") {
+      return;
+    }
+    assert.deepEqual(
+      listing.rows.map((row) =>
+        row.kind === "group" ? row.label : row.service.name,
+      ),
+      ["Current service", "Old"],
+    );
+  },
+);
+
+QUnit.test(
+  "typing keeps a pinned service that is missing from the catalog",
+  (assert) => {
+    const pinned = { id: serviceId("svc-old"), name: "Old" };
+    let state = initialPickerState({
+      kind: "ready",
+      day: monday,
+      pinned,
+    });
+    state = servicePickerReducer(state, {
+      kind: "baseArrived",
+      day: monday,
+      catalog: emptyServiceCatalog,
+    });
+    state = servicePickerReducer(state, {
+      kind: "inputChanged",
+      input: "zzz",
+    });
+    const listing = listingFrom(state);
+    assert.equal(listing.kind, "rows");
+    if (listing.kind !== "rows") {
+      return;
+    }
+    assert.deepEqual(
+      listing.rows
+        .filter(
+          (row) => row.kind === "group" && row.label === "Current service",
+        )
+        .map((row) => (row.kind === "group" ? row.label : "")),
+      ["Current service"],
+    );
   },
 );

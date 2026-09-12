@@ -1,10 +1,16 @@
 import { Stack, Text } from "@chakra-ui/react";
-import type { ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router";
-import { useAuth, type Credentials, type Person } from "../lib/auth";
+import {
+  useAuth,
+  type Credentials,
+  type LogoutArgs,
+  type Person,
+} from "../lib/auth";
+import { pageHeading } from "../lib/document";
 import { entryFieldsFrom } from "../features/timesheet";
 import { resolveEditEntryRoute, type EditEntryRoute } from "../features/edit";
-import { useEditEntry } from "../features/edit/hooks";
+import { dayMoved, useEditEntry } from "../features/edit/hooks";
 import {
   BackHomeLink,
   ENTRY_FORM_WIDTH,
@@ -13,6 +19,7 @@ import {
   Header,
   HeaderSkeleton,
 } from "../ui";
+import type { CalendarDay } from "../lib/time/calendar-day.ts";
 
 const FORM_PENDING_NAME = "Loading time entry";
 
@@ -27,7 +34,16 @@ export function EditEntryPage() {
       return (
         <>
           <HeaderSkeleton page="editEntry" />
-          <Stack as="main" id="main" gap="6" w="full" px="4" py="6" pb="6">
+          <Stack
+            as="main"
+            id="main"
+            aria-label={pageHeading("editEntry")}
+            gap="6"
+            w="full"
+            px="4"
+            py="6"
+            pb="6"
+          >
             <Stack gap="4" maxW={ENTRY_FORM_WIDTH} w="full" mx="auto">
               <EditEntryLoadingBody />
             </Stack>
@@ -35,6 +51,7 @@ export function EditEntryPage() {
         </>
       );
     case "anonymous":
+    case "expired":
     case "unavailable":
       return <Navigate to="/login" replace />;
     case "authenticated":
@@ -45,8 +62,8 @@ export function EditEntryPage() {
     }
   }
 
-  function onLogout() {
-    logout();
+  function onLogout(args?: LogoutArgs) {
+    logout(args);
     void navigate("/login", { replace: true });
   }
 
@@ -63,10 +80,10 @@ export function EditEntryPage() {
   );
 }
 
-function EditEntryLoadingBody(): ReactElement {
+function EditEntryLoadingBody(props: { day?: CalendarDay }): ReactElement {
   return (
     <Stack gap="4">
-      <BackHomeLink />
+      <BackHomeLink day={props.day} />
       <Stack
         gap="4"
         role="status"
@@ -79,18 +96,37 @@ function EditEntryLoadingBody(): ReactElement {
   );
 }
 
+function useDiscardPrompt(dirty: boolean) {
+  useEffect(() => {
+    if (!dirty) {
+      return;
+    }
+    function onBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+  }, [dirty]);
+}
+
 function AuthenticatedEditEntry(props: {
   credentials: Credentials;
   person: Person;
-  logout: () => void;
+  logout: (args?: LogoutArgs) => void;
   route: EditEntryRoute;
 }) {
-  const { page, picker, save } = useEditEntry({
+  const { page, picker, save, selectDay } = useEditEntry({
     credentials: props.credentials,
     person: props.person,
     logout: props.logout,
     route: props.route,
   });
+  const [fieldsDirty, setFieldsDirty] = useState(false);
+  const dirty = fieldsDirty || dayMoved(page);
+  useDiscardPrompt(dirty);
 
   let body;
   switch (page.kind) {
@@ -120,16 +156,18 @@ function AuthenticatedEditEntry(props: {
     case "saving":
       body = (
         <Stack gap={4}>
-          <BackHomeLink />
+          <BackHomeLink day={page.session.entry.day} dirty={dirty} />
           <EntryForm
-            key={page.entry.id}
-            initial={entryFieldsFrom(page.entry)}
+            key={page.session.entry.id}
+            initial={entryFieldsFrom(page.session.entry)}
+            day={{ value: page.session.day, select: selectDay }}
             submitLabel="Save changes"
             picker={picker}
             submitting={page.kind === "saving"}
             blocked={false}
             error={undefined}
             onSubmit={save}
+            onDirtyChange={setFieldsDirty}
           />
         </Stack>
       );
@@ -143,7 +181,16 @@ function AuthenticatedEditEntry(props: {
   return (
     <>
       <Header page="editEntry" person={props.person} logout={props.logout} />
-      <Stack as="main" id="main" gap="6" w="full" px="4" py="6" pb="6">
+      <Stack
+        as="main"
+        id="main"
+        aria-label={pageHeading("editEntry")}
+        gap="6"
+        w="full"
+        px="4"
+        py="6"
+        pb="6"
+      >
         <Stack gap="4" maxW={ENTRY_FORM_WIDTH} w="full" mx="auto">
           {body}
         </Stack>

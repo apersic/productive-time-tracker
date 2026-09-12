@@ -1,4 +1,4 @@
-import { Box, useRecipe } from "@chakra-ui/react";
+import { Box, useFieldContext, useRecipe } from "@chakra-ui/react";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { history, redo, undo } from "prosemirror-history";
 import { inputRules, wrappingInputRule } from "prosemirror-inputrules";
@@ -44,12 +44,31 @@ function emptyEditorDoc(): PMNode {
 
 function editorAttributes(
   state: EditorState,
-  placeholder: string,
+  args: {
+    placeholder: string;
+    disabled: boolean;
+    id: string;
+    labelledBy: string;
+    describedBy: string | undefined;
+  },
 ): { [name: string]: string } {
-  if (noteDocShowsPlaceholder(state.doc)) {
-    return { class: "is-empty", "data-placeholder": placeholder };
+  const attributes: { [name: string]: string } = {
+    id: args.id,
+    role: "textbox",
+    "aria-multiline": "true",
+    "aria-labelledby": args.labelledBy,
+  };
+  if (args.describedBy) {
+    attributes["aria-describedby"] = args.describedBy;
   }
-  return {};
+  if (args.disabled) {
+    attributes["aria-disabled"] = "true";
+  }
+  if (noteDocShowsPlaceholder(state.doc)) {
+    attributes.class = "is-empty";
+    attributes["data-placeholder"] = args.placeholder;
+  }
+  return attributes;
 }
 
 function docFromNote(note: EntryNote): PMNode {
@@ -71,11 +90,13 @@ export function NoteEditor(props: {
   disabled?: boolean;
   placeholder: string;
 }) {
+  const field = useFieldContext();
   const mountRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const onChangeRef = useRef(props.onChange);
   const disabledRef = useRef(props.disabled === true);
   const placeholderRef = useRef(props.placeholder);
+  const fieldRef = useRef(field);
   const initialValueRef = useRef(props.value);
   const disabled = props.disabled === true;
   const textarea = useRecipe({ key: "textarea" });
@@ -83,6 +104,7 @@ export function NoteEditor(props: {
   onChangeRef.current = props.onChange;
   disabledRef.current = disabled;
   placeholderRef.current = props.placeholder;
+  fieldRef.current = field;
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -95,7 +117,16 @@ export function NoteEditor(props: {
         plugins: noteEditorPlugins,
       }),
       editable: () => !disabledRef.current,
-      attributes: (state) => editorAttributes(state, placeholderRef.current),
+      attributes: (state) => {
+        const current = fieldRef.current;
+        return editorAttributes(state, {
+          placeholder: placeholderRef.current,
+          disabled: disabledRef.current,
+          id: current.ids.control,
+          labelledBy: current.ids.label,
+          describedBy: current.ariaDescribedby,
+        });
+      },
       dispatchTransaction(tr) {
         const next = view.state.apply(tr);
         view.updateState(next);
@@ -112,8 +143,10 @@ export function NoteEditor(props: {
   }, []);
 
   useEffect(() => {
-    viewRef.current?.setProps({ editable: () => !disabledRef.current });
-  }, [disabled]);
+    viewRef.current?.setProps({
+      editable: () => !disabledRef.current,
+    });
+  }, [disabled, field.ids.control, field.ids.label, field.ariaDescribedby]);
 
   useEffect(() => {
     const view = viewRef.current;

@@ -1,7 +1,13 @@
-import { Box, Grid, Skeleton, Stack, Text } from "@chakra-ui/react";
-import type { ReactElement } from "react";
+import { Box, Flex, Grid, Skeleton, Stack, Text } from "@chakra-ui/react";
+import type { ReactElement, ReactNode } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router";
-import { useAuth, type Credentials, type Person } from "../lib/auth";
+import {
+  useAuth,
+  type Credentials,
+  type LogoutArgs,
+  type Person,
+} from "../lib/auth";
+import { pageHeading } from "../lib/document";
 import { todayLocal } from "../lib/time/calendar-day.ts";
 import { useDayTimesheet } from "../features/timesheet/hooks";
 import {
@@ -17,6 +23,8 @@ import {
   EntryFormSkeleton,
   Header,
   HeaderSkeleton,
+  HOME_CONTENT_MAX_W,
+  HOME_CREATE_PORTAL_ID,
   HOME_CREATE_SPLIT,
   HOME_GRID_COLUMNS,
 } from "../ui";
@@ -29,6 +37,7 @@ export function HomePage() {
     case "booting":
       return <HomeSkeleton />;
     case "anonymous":
+    case "expired":
     case "unavailable":
       return <Navigate to="/login" replace />;
     case "authenticated":
@@ -39,8 +48,8 @@ export function HomePage() {
     }
   }
 
-  function onLogout() {
-    logout();
+  function onLogout(args?: LogoutArgs) {
+    logout(args);
     void navigate("/login", { replace: true });
   }
 
@@ -53,37 +62,75 @@ export function HomePage() {
   );
 }
 
+function HomeShell(props: { children: ReactNode }): ReactElement {
+  return (
+    <Flex direction="column" h="100dvh" maxH="100dvh" overflow="hidden">
+      {props.children}
+    </Flex>
+  );
+}
+
+function HomeMain(props: { children: ReactNode }): ReactElement {
+  return (
+    <Stack
+      as="main"
+      id="main"
+      aria-label={pageHeading("home")}
+      gap="6"
+      w="full"
+      maxW={HOME_CONTENT_MAX_W}
+      mx="auto"
+      px="4"
+      py="6"
+      pb={{ base: "24", lg: "6" }}
+      flex="1"
+      minH="0"
+      overflow="hidden"
+    >
+      {props.children}
+    </Stack>
+  );
+}
+
 function HomeSkeleton(): ReactElement {
   return (
-    <>
+    <HomeShell>
       <HeaderSkeleton page="home" />
-      <Stack
-        as="main"
-        id="main"
-        gap="6"
-        w="full"
-        px="4"
-        py="6"
-        pb={{ base: "24", lg: "6" }}
-      >
-        <Grid templateColumns={HOME_GRID_COLUMNS} gap="8">
+      <HomeMain>
+        <Grid
+          templateColumns={HOME_GRID_COLUMNS}
+          templateRows="minmax(0, 1fr)"
+          gap="8"
+          flex="1"
+          minH="0"
+        >
           <Box hideBelow={HOME_CREATE_SPLIT}>
             <EntryFormSkeleton />
           </Box>
-          <Stack gap="4">
-            <Skeleton height="10" borderRadius="md" aria-hidden />
+          <Stack
+            flex="1"
+            minH="0"
+            overflow="hidden"
+            gap={{ base: "8", lg: "4" }}
+          >
+            <Skeleton
+              height="10"
+              borderRadius="md"
+              aria-hidden
+              flexShrink="0"
+            />
             <DayEntryListSkeleton />
           </Stack>
         </Grid>
-      </Stack>
-    </>
+      </HomeMain>
+    </HomeShell>
   );
 }
 
 function AuthenticatedHome(props: {
   credentials: Credentials;
   person: Person;
-  logout: () => void;
+  logout: (args?: LogoutArgs) => void;
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -107,30 +154,37 @@ function AuthenticatedHome(props: {
   });
 
   return (
-    <>
+    <HomeShell>
       <Header page="home" person={props.person} logout={props.logout} />
-      <Stack
-        as="main"
-        id="main"
-        gap="6"
-        w="full"
-        px="4"
-        py="6"
-        pb={{ base: "24", lg: "6" }}
-      >
+      <HomeMain>
         {timesheet.timer.kind === "failed" ? (
-          <Text color="fg.error" role="alert">
+          <Text color="fg.error" role="alert" flexShrink="0">
             {timesheet.timer.error.message}
           </Text>
         ) : null}
-        <Grid templateColumns={HOME_GRID_COLUMNS} gap="8">
-          <CreateEntrySurface
-            picker={picker}
-            blocked={timesheet.entries.status === "loading"}
-            onCreate={addEntry}
-          />
-          <Stack gap="4">
-            <DayField value={timesheet.day} onChange={selectDay} />
+        <Grid
+          templateColumns={HOME_GRID_COLUMNS}
+          templateRows="minmax(0, 1fr)"
+          gap="8"
+          flex="1"
+          minH="0"
+        >
+          <Box hideBelow={HOME_CREATE_SPLIT} minH="0" overflow="hidden">
+            <CreateEntrySurface
+              picker={picker}
+              blocked={timesheet.entries.status === "loading"}
+              onCreate={addEntry}
+            />
+          </Box>
+          <Stack
+            flex="1"
+            minH="0"
+            overflow="hidden"
+            gap={{ base: "8", lg: "4" }}
+          >
+            <Box flexShrink="0">
+              <DayField value={timesheet.day} onChange={selectDay} />
+            </Box>
             <DayEntryList
               timesheet={timesheet}
               now={now}
@@ -147,7 +201,8 @@ function AuthenticatedHome(props: {
             />
           </Stack>
         </Grid>
-      </Stack>
-    </>
+      </HomeMain>
+      <Box id={HOME_CREATE_PORTAL_ID} />
+    </HomeShell>
   );
 }

@@ -1,80 +1,73 @@
-import { DatePicker, Portal, parseDate } from "@chakra-ui/react";
+import { Flex, IconButton } from "@chakra-ui/react";
 import {
-  formatCalendarDayLabel,
-  parseCalendarDay,
+  nextCalendarDay,
+  previousCalendarDay,
+  todayLocal,
   type CalendarDay,
 } from "../../lib/time/calendar-day.ts";
-import { CalendarIcon } from "../../lib/icons";
+import { ChevronIcon } from "../../lib/icons";
+import { CalendarDayPicker } from "./calendar-day-picker.tsx";
 
 export function DayField(props: {
   value: CalendarDay;
   onChange: (day: CalendarDay) => void;
 }) {
-  const selected = parseDate(props.value);
+  const today = todayLocal();
 
   return (
-    <>
-      <input type="hidden" name="day" value={props.value} />
-      <DatePicker.Root
-        value={selected ? [selected] : []}
-        colorPalette="blue"
-        variant="outline"
-        openOnClick
-        width={{ base: "full", lg: "auto" }}
-        alignSelf={{ base: "stretch", lg: "flex-start" }}
-        format={(date) => {
-          const day = parseCalendarDay(date.toString());
-          return day ? formatCalendarDayLabel(day) : date.toString();
-        }}
-        parse={(value) => {
-          const day = parseCalendarDay(value);
-          return day ? parseDate(day) : undefined;
-        }}
-        onValueChange={(details) => {
-          const next = details.value[0];
-          if (!next) {
-            return;
-          }
-          const day = parseCalendarDay(next.toString());
-          if (day) {
-            props.onChange(day);
-          }
-        }}
-      >
-        <DatePicker.Label>Day</DatePicker.Label>
-        <DatePicker.Control bg="bg" width="full">
-          <DatePicker.Input autoComplete="off" bg="bg" />
-          <DatePicker.IndicatorGroup>
-            <DatePicker.Trigger aria-label="Open calendar">
-              <CalendarIcon />
-            </DatePicker.Trigger>
-          </DatePicker.IndicatorGroup>
-        </DatePicker.Control>
-        <Portal>
-          <DatePicker.Positioner>
-            <DatePicker.Content
-              colorPalette="blue"
-              bg="bg"
-              borderWidth="1px"
-              borderColor="border"
-              boxShadow="md"
-            >
-              <DatePicker.View view="day">
-                <DatePicker.Header />
-                <DatePicker.DayTable />
-              </DatePicker.View>
-              <DatePicker.View view="month">
-                <DatePicker.Header />
-                <DatePicker.MonthTable />
-              </DatePicker.View>
-              <DatePicker.View view="year">
-                <DatePicker.Header />
-                <DatePicker.YearTable />
-              </DatePicker.View>
-            </DatePicker.Content>
-          </DatePicker.Positioner>
-        </Portal>
-      </DatePicker.Root>
-    </>
+    <Flex gap="2" align="center" wrap="wrap">
+      <Flex gap="1">
+        <IconButton
+          type="button"
+          variant="ghost"
+          colorPalette="blue"
+          aria-label="Previous day"
+          onClick={() => {
+            props.onChange(previousCalendarDay(props.value));
+          }}
+        >
+          <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}>
+            <ChevronIcon />
+          </span>
+        </IconButton>
+        <IconButton
+          type="button"
+          variant="ghost"
+          colorPalette="blue"
+          aria-label="Today"
+          onClick={() => {
+            props.onChange(today);
+          }}
+          disabled={props.value === today}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: "0.5rem",
+              height: "0.5rem",
+              borderRadius: "9999px",
+              background: "currentColor",
+            }}
+          />
+        </IconButton>
+        <IconButton
+          type="button"
+          variant="ghost"
+          colorPalette="blue"
+          aria-label="Next day"
+          onClick={() => {
+            props.onChange(nextCalendarDay(props.value));
+          }}
+        >
+          <ChevronIcon />
+        </IconButton>
+      </Flex>
+      <CalendarDayPicker
+        value={props.value}
+        onChange={props.onChange}
+        label="Day"
+        labelHidden
+      />
+    </Flex>
   );
 }

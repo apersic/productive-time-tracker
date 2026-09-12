@@ -1,6 +1,10 @@
 export const HOME_CREATE_SPLIT = "lg" as const;
 
+export const HOME_CREATE_PORTAL_ID = "home-create-portal";
+
 export const ENTRY_FORM_WIDTH = "22rem";
+
+export const HOME_CONTENT_MAX_W = "80rem";
 
 export const HOME_GRID_COLUMNS = {
   base: "1fr",

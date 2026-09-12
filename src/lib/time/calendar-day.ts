@@ -37,6 +37,12 @@ export function previousCalendarDay(day: CalendarDay): CalendarDay {
   return formatLocalYmd(date);
 }
 
+export function nextCalendarDay(day: CalendarDay): CalendarDay {
+  const date = localDateFromCalendarDay(day);
+  date.setDate(date.getDate() + 1);
+  return formatLocalYmd(date);
+}
+
 export function formatCalendarDayLabel(day: CalendarDay): string {
   return localDateFromCalendarDay(day).toLocaleDateString(undefined, {
     year: "numeric",
