@@ -173,6 +173,23 @@ QUnit.test("select stores the full TrackableService", (assert) => {
   assert.deepEqual(state.selection, { id: serviceId("svc-2"), name: "Design" });
 });
 
+QUnit.test("day change keeps the current selection", (assert) => {
+  let state = initialPickerState({
+    kind: "ready",
+    day: monday,
+    pinned: development,
+  });
+  state = servicePickerReducer(state, {
+    kind: "selected",
+    service: design,
+  });
+  state = servicePickerReducer(state, {
+    kind: "contextChanged",
+    context: { kind: "ready", day: tuesday, pinned: development },
+  });
+  assert.deepEqual(state.selection, design);
+});
+
 QUnit.test(
   "day change bumps searchGeneration and drops the pending query",
   (assert) => {
