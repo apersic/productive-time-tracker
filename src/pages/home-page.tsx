@@ -70,7 +70,7 @@ function HomeSkeleton(): ReactElement {
           <Box hideBelow={HOME_CREATE_SPLIT}>
             <EntryFormSkeleton />
           </Box>
-          <Stack gap="4">
+          <Stack flex="1" gap="4">
             <Skeleton height="10" borderRadius="md" aria-hidden />
             <DayEntryListSkeleton />
           </Stack>
@@ -129,7 +129,7 @@ function AuthenticatedHome(props: {
             blocked={timesheet.entries.status === "loading"}
             onCreate={addEntry}
           />
-          <Stack gap="4">
+          <Stack flex="1" gap="4">
             <DayField value={timesheet.day} onChange={selectDay} />
             <DayEntryList
               timesheet={timesheet}

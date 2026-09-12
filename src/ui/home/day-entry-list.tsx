@@ -33,6 +33,7 @@ import {
   type TimeEntryId,
   type TimerControl,
 } from "../../features/timesheet";
+import { SITE_ICON_HREF } from "../../lib/document";
 import { formatCalendarDayLabel } from "../../lib/time/calendar-day.ts";
 import { formatHhMm } from "../../lib/time/duration.ts";
 import { Card } from "../shared";
@@ -585,14 +586,29 @@ export function DayEntryList(props: {
       break;
     case "empty":
       body = (
-        <Stack gap="4">
+        <Stack
+          flex="1"
+          align="center"
+          justify="center"
+          gap="4"
+          textAlign="center"
+        >
+          <img
+            src={SITE_ICON_HREF}
+            alt=""
+            aria-hidden={true}
+            width={48}
+            height={48}
+          />
           <Text>
             There's no tracked time for {formatCalendarDayLabel(timesheet.day)}
           </Text>
           {copyButtonVisible(timesheet) ? (
             <Button
               type="button"
-              variant="outline"
+              colorPalette="blue"
+              variant="solid"
+              alignSelf="center"
               onClick={props.onCopyPreviousDay}
               loading={timesheet.entries.copy.kind === "copying"}
               disabled={timesheet.entries.copy.kind === "copying"}
