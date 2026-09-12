@@ -130,7 +130,12 @@ export function useDayTimesheet(args: {
     credentials: args.credentials,
     personId: args.person.id,
     context: { kind: "ready", day: timesheet.day, pinned: undefined },
-    onUnauthorized: args.logout,
+    onUnauthorized: () => {
+      onError({
+        kind: "unauthorized",
+        message: "Unauthorized.",
+      });
+    },
   });
 
   useEffect(() => {

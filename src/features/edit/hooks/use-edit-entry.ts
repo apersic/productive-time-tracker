@@ -97,7 +97,10 @@ export function useEditEntry(args: {
     credentials: args.credentials,
     personId: args.person.id,
     context: pickerContext(page),
-    onUnauthorized: args.logout,
+    onUnauthorized: () => {
+      announce({ op: "sessionExpired" });
+      args.logout({ reason: "expired" });
+    },
   });
 
   const entryId = routeEntryId(args.route);

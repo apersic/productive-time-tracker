@@ -9,34 +9,37 @@ The app is a Vite 8 single-page app with React 19, TypeScript, and Chakra UI. Th
 Routes:
 
 - `/login` is the login form.
-- `/` is home. An anonymous session redirects to `/login`.
+- `/` is home. An anonymous, expired, or unavailable session redirects to `/login`.
+- `/edit/:entryId` is the edit form for one time entry. The same unauthenticated sessions redirect to `/login`.
 - An authenticated session on `/login` redirects to `/`.
 
 Auth is a discriminated `Session` in `src/lib/auth/session.ts`:
 
 - `booting` while stored credentials are checked
 - `anonymous` when there is no valid session
+- `expired` after a 401 or 403 on a later request. Login shows that the session ended.
 - `unavailable` when stored credentials could not be verified because Productive was unreachable or returned a non-auth error. The token stays in `localStorage`.
 - `authenticated` with `credentials` and `person`
 
-Credentials are `{ organizationId, accessToken }`. They persist in `localStorage` under `productive-time-tracker.credentials` so a refresh keeps the user logged in. Restore clears that key only on HTTP 401 or 403. Network failures and invalid API payloads keep the stored token and send the user to login with an error. Log out removes that key and returns the session to `anonymous`.
+Credentials are `{ organizationId, accessToken }`. They persist in `localStorage` under `productive-time-tracker.credentials` so a refresh keeps the user logged in. Restore clears that key only on HTTP 401 or 403. Network failures and invalid API payloads keep the stored token and send the user to login with an error. Log out removes that key and returns the session to `anonymous`, or to `expired` when logout was caused by a 401 or 403.
 
 `src/providers/productive` is the only module that speaks JSON:API. It parses responses into domain types. UI code does not read `data.attributes`.
 
 The current person is resolved at login. `GET /users` with a personal token returns that user. `GET /people?filter[email]=` then returns the person record used on time entries. The login form does not ask who you are.
 
-Time entry create in the UI has duration, date, and description only. Creates send `person_id` from the authenticated person. The user does not pick a person.
+Create and edit send `person_id` from the authenticated person. The user does not pick a person.
 
 ## Main UI components
 
-Chakra UI owns the visible controls.
+Chakra UI owns the visible controls. A skip link is the first focusable control and points at `main#main`.
 
 - **Login form.** Organization ID and API token. Submit authenticates against Productive. Failure shows an error. Success stores credentials and opens home.
-- **Home.** Shows that the user is signed in, the current person name, and **Log out**.
-- **Day control.** A date input. Default is today in the browser's local timezone. Planned for the time-entry screen.
-- **Entry list.** Rows for the selected day. Duration and description. Who worked is the current person, not a column the user edits.
-- **Entry form.** Duration, date, and a textarea for description. No person field.
+- **Home.** The person name is a menu that contains **Log out**. A day control defaults to today in the browser timezone. Wide layouts show the create form beside the list. Narrow layouts hide that form behind a **New time entry** button that opens a full-screen dialog.
+- **Entry list.** Rows for the selected day. Each row shows duration, service name, optional project, optional task title, and the note. Play and stop drive Productive timers. More actions offer edit and delete. An empty day can copy tasks from the previous day. Further pages load by scrolling `links.next`.
+- **Entry form.** Duration, a service picker, and a ProseMirror note. No person field. No date field. Home's day control is the date for creates. Edit keeps the entry's existing date.
+- **Service picker.** A combobox that expands into company, project, deal, and section groups. Search calls Productive with `filter[query]`. One trackable service is selected automatically. A service that is already on an entry stays visible even when it is no longer bookable that day.
 - **Delete action.** A confirm step before `DELETE`.
+- **Edit.** `/edit/:entryId` reuses the same form. Save `PATCH`es duration, note, and service. Unsaved navigation warns in the browser.
 
 ## How the app talks to the Productive API
 
@@ -55,36 +58,45 @@ Login:
 
 Time entries:
 
-- List the day with `GET /time_entries?filter[date]=YYYY-MM-DD`.
-- Create with `POST /time_entries`. `person_id` is the authenticated person. Duration is `time` in minutes. Day is `date`. Description is `note`.
-- Edit with `PATCH /time_entries/{id}`.
+- List the day with `GET /time_entries` filtered to the current person, drafts included, and that calendar date. Include `service,task,service.deal.project`. Follow `links.next`.
+- Create with `POST /time_entries`. `person_id` is the authenticated person. Duration is `time` in minutes. Day is `date`. Description is `note` HTML. `service_id` is required.
+- Edit with `PATCH /time_entries/{id}` for `time`, `note`, and `service`. The date is not edited.
 - Delete with `DELETE /time_entries/{id}`.
 
-`POST /time_entries` also requires `service_id`. The assignment does not mention a service. See assumptions.
+Services:
+
+- `GET /services` filtered to budgets and deals, time tracking enabled, the bookable date, and the current person. Optional `filter[query]` searches. Include `deal.company,deal.project.company,section.deal.project.company`.
+- Sparse fieldsets ask only for ids, names, deal suffix, and the relationships the parser walks. `sort` still uses `section_position` and `position` on the server. Time totals, avatars, and organizations are not requested.
+
+Timers use Productive's timer resources to start, stop, and recover a running timer on a time entry.
 
 ## Implementation decisions and tradeoffs
 
 **Browser app, no backend.** Vite plus `fetch` matches the no-server rule. The API token lives in the browser after login. Do not add a proxy or BFF.
 
-**localStorage, not sessionStorage.** A refresh must keep the session. Log out is the clear action. Closing the tab keeps the session until log out. The token is plaintext in `localStorage` because this app has no server. A content security policy limits scripts, connections, and framing. UI text is not injected as HTML.
+**localStorage, not sessionStorage.** A refresh must keep the session. Log out is the clear action. Closing the tab keeps the session until log out. The token is plaintext in `localStorage` because this app has no server.
 
-**Login fields are not a password-manager account.** Organization ID and API token use `autocomplete="off"` so the browser does not treat the token as the Productive website password.
+**Content security policy.** `src/lib/document/csp.ts` builds two strings. Vite's dev and preview servers send the header, which includes `frame-ancestors 'none'`. The meta tag omits that directive because browsers ignore `frame-ancestors` in `http-equiv` and log an error. A static host of `dist/` must send the same header itself. UI text is not injected as HTML.
 
-**Chakra for UI, not a second design system on the login path.** Login and home use Chakra components.
+**Login fields.** Organization ID uses `autocomplete="username"`. The API token uses `autocomplete="current-password"` so a password manager can store the pair. That is not `off`.
 
-**JSON:API stays behind one module.** Parse once. The UI sees `Session` and `Person`.
+**Chakra for UI, not a second design system on the login path.** Login, home, and edit use Chakra components.
+
+**JSON:API stays behind one module.** Parse once. The UI sees `Session`, `Person`, `TimeEntry`, and `ServiceCatalog`.
 
 **Person is not a form field.** The assignment says the person relationship is the current person. A people picker would contradict that.
 
+**Service groups are display-only.** A stored entry keeps `{ id, name }`. Company, project, deal, and section exist so the picker can nest rows. They are not written back on create or patch.
+
 ## Assumptions
 
-1. **The given day is user-selected.** The date control defaults to today and can move.
-2. **Description is `note`.** Productive has no separate description field on a time entry.
+1. **The given day is user-selected.** The date control defaults to today and can move. Create uses that day. Edit keeps the entry's day.
+2. **Description is `note`.** Productive has no separate description field on a time entry. The editor stores HTML.
 3. **Duration is minutes on the wire.** The form can show hours and minutes. Storage and API use `time`.
-4. **A service is required to create.** Productive requires `service_id` on `POST /time_entries`. The app will load services or use a configured default when time-entry create is built.
+4. **A service is required to create.** Productive requires `service_id` on `POST /time_entries`. The picker loads bookable services for the selected day.
 5. **A personal API token identifies one user.** `GET /users` must return exactly one `users` resource. Two rows is an error.
 6. **Current person is the people row whose email matches the current user.** `filter[email]` must return exactly one `people` resource.
-7. **No pagination in the first UI.** If a day has more than one Productive page of entries, the client follows `links.next`.
+7. **Pagination follows `links.next`.** The list does not show a Load more button when more pages exist. Scrolling fetches the next page.
 8. **Local timezone for today.** `date` sent to Productive is a calendar day in the browser timezone, not UTC.
-9. **Edit can change duration, date, and description.** Person stays the current person.
+9. **Edit can change duration, service, and description.** Person and date stay as they were.
 10. **Delete is immediate after confirm.**

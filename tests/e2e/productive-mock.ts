@@ -224,8 +224,6 @@ export async function mockTimers(
   options?: {
     onStart?: (entryId: string) => void;
     onStop?: (timerId: string) => void;
-    failStart?: boolean;
-    gate?: Gate;
   },
 ) {
   await page.route("**/api/v2/timers**", async (route) => {
@@ -235,18 +233,15 @@ export async function mockTimers(
         request.postDataJSON(),
         "time_entry",
       );
-      options?.onStart?.(entryId ?? "entry-1");
-      if (options?.failStart) {
+      if (!entryId) {
         await route.fulfill({
-          status: 500,
+          status: 400,
           contentType: "application/vnd.api+json",
           body: "{}",
         });
         return;
       }
-      if (options?.gate) {
-        await options.gate.wait();
-      }
+      options?.onStart?.(entryId);
       await route.fulfill({
         ...jsonApiHeaders(),
         body: JSON.stringify({
@@ -259,7 +254,7 @@ export async function mockTimers(
             },
             relationships: {
               time_entry: {
-                data: { type: "time_entries", id: entryId ?? "entry-1" },
+                data: { type: "time_entries", id: entryId },
               },
             },
           },
@@ -269,12 +264,20 @@ export async function mockTimers(
     }
     if (request.method() === "PATCH") {
       const timerId = timerIdFromStopUrl(request.url());
-      options?.onStop?.(timerId ?? "timer-1");
+      if (!timerId) {
+        await route.fulfill({
+          status: 400,
+          contentType: "application/vnd.api+json",
+          body: "{}",
+        });
+        return;
+      }
+      options?.onStop?.(timerId);
       await route.fulfill({
         ...jsonApiHeaders(),
         body: JSON.stringify({
           data: {
-            id: timerId ?? "timer-1",
+            id: timerId,
             type: "timers",
           },
         }),

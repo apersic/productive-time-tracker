@@ -4,8 +4,6 @@ export const PAGE_IDS = ["login", "home", "editEntry"] as const;
 
 export type PageId = (typeof PAGE_IDS)[number];
 
-export const PAGES: readonly PageId[] = PAGE_IDS;
-
 export function pageHeading(page: PageId): string {
   switch (page) {
     case "login":
