@@ -52,9 +52,14 @@ export function CreateEntrySurface(props: {
     setPortal(document.getElementById(HOME_CREATE_PORTAL_ID));
   }, []);
 
-  if (layout === "inline" && request.kind === "open") {
-    setRequest({ kind: "closed" });
-  }
+  useEffect(() => {
+    if (layout !== "inline") {
+      return;
+    }
+    setRequest((current) =>
+      current.kind === "open" ? { kind: "closed" } : current,
+    );
+  }, [layout]);
 
   async function submit(draft: EntryDraft): Promise<boolean> {
     if (status.kind === "saving") {

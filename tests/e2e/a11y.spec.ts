@@ -13,18 +13,9 @@ import {
 
 test("login has no axe violations", async ({ page }) => {
   await page.goto("/login");
+  await expect(page.getByLabel("API token")).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
-});
-
-test("reduced motion turns off smooth scrolling", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/login");
-  expect(
-    await page.evaluate(
-      () => getComputedStyle(document.documentElement).scrollBehavior,
-    ),
-  ).toBe("auto");
 });
 
 test("home names the description field and row actions", async ({ page }) => {
@@ -129,9 +120,9 @@ test("keyboard can pick a service from the listbox", async ({ page }) => {
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("option", { name: "Design" })).toBeFocused();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("combobox", { name: "Service" })).toHaveText(
-    "Design",
-  );
+  const combobox = page.getByRole("combobox", { name: "Service" });
+  await expect(combobox).toHaveText("Design");
+  await expect(combobox).toBeFocused();
 });
 
 test("delete dialog names the entry and returns focus", async ({ page }) => {

@@ -99,7 +99,7 @@ function HomeSkeleton(): ReactElement {
       <HomeMain>
         <Grid
           templateColumns={HOME_GRID_COLUMNS}
-          templateRows={{ base: "auto minmax(0, 1fr)", lg: "minmax(0, 1fr)" }}
+          templateRows="minmax(0, 1fr)"
           gap="8"
           flex="1"
           minH="0"
@@ -157,7 +157,6 @@ function AuthenticatedHome(props: {
     <HomeShell>
       <Header page="home" person={props.person} logout={props.logout} />
       <HomeMain>
-        <Box id={HOME_CREATE_PORTAL_ID} flexShrink="0" />
         {timesheet.timer.kind === "failed" ? (
           <Text color="fg.error" role="alert" flexShrink="0">
             {timesheet.timer.error.message}
@@ -165,12 +164,12 @@ function AuthenticatedHome(props: {
         ) : null}
         <Grid
           templateColumns={HOME_GRID_COLUMNS}
-          templateRows={{ base: "auto minmax(0, 1fr)", lg: "minmax(0, 1fr)" }}
+          templateRows="minmax(0, 1fr)"
           gap="8"
           flex="1"
           minH="0"
         >
-          <Box minH="0" overflow="hidden">
+          <Box hideBelow={HOME_CREATE_SPLIT} minH="0" overflow="hidden">
             <CreateEntrySurface
               picker={picker}
               blocked={timesheet.entries.status === "loading"}
@@ -203,6 +202,7 @@ function AuthenticatedHome(props: {
           </Stack>
         </Grid>
       </HomeMain>
+      <Box id={HOME_CREATE_PORTAL_ID} />
     </HomeShell>
   );
 }

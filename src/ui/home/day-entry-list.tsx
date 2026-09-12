@@ -123,7 +123,7 @@ function listAnnouncement(timesheet: DayTimesheet): string {
 function entryNoteView(note: EntryNote) {
   switch (note.kind) {
     case "empty":
-      return null;
+      return "-";
     case "present":
       return <NoteView note={note} />;
     default: {

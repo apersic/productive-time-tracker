@@ -23,7 +23,7 @@ export function DayField(props: {
   const today = todayLocal();
 
   return (
-    <Flex gap="2" align="end" wrap="wrap">
+    <Flex gap="2" align="center" wrap="wrap">
       <Flex gap="1">
         <IconButton
           type="button"
@@ -95,7 +95,7 @@ export function DayField(props: {
           }
         }}
       >
-        <DatePicker.Label>Day</DatePicker.Label>
+        <DatePicker.Label className="sr-only">Day</DatePicker.Label>
         <DatePicker.Control bg="bg" w="auto">
           <DatePicker.Input
             autoComplete="off"

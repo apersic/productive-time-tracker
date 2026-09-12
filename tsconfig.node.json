@@ -20,6 +20,7 @@
     "vite.config.ts",
     "playwright.config.ts",
     "src/lib/document/site.ts",
-    "src/lib/document/shell.ts"
+    "src/lib/document/shell.ts",
+    "src/lib/document/csp.ts"
   ]
 }

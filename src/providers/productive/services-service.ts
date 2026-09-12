@@ -1,6 +1,7 @@
 import type { Credentials, PersonId } from "../../lib/auth/session.ts";
 import {
   parseServiceId,
+  type ServiceId,
   type TimesheetError,
 } from "../../features/timesheet/timesheet-model.ts";
 import {
@@ -42,7 +43,7 @@ export function serviceCatalogPath(args: {
   const trimmed = args.query?.trim() ?? "";
   const queryPart =
     trimmed.length > 0 ? `&filter[query]=${encodeURIComponent(trimmed)}` : "";
-  return `/services?fields[services]=id,name,billable_time,estimated_time,worked_time,budgeted_time,quantity,unit_id,position,billing_type_id,section,deal,time_tracking_enabled&fields[deals]=id,name,suffix,man_day_minutes,budget,project,company,organization,date,end_date,rounding_method_id,rounding_interval_id&fields[sections]=id,name,position,deal&fields[projects]=id,name,created_at,company&fields[companies]=id,name,avatar_url&fields[organizations]=id,name,avatar_url&filter[budgets_and_deals]=true&filter[time_tracking_enabled]=true&filter[bookable_date]=${day}&filter[person_id]=${person}${queryPart}&include=deal.company,deal.subsidiary,deal.project.company,section.deal&page=1&per_page=200&sort=company,project_name,budget,section_position,position`;
+  return `/services?fields[services]=id,name,section,deal&fields[deals]=id,name,suffix,project,company&fields[sections]=id,name,deal&fields[projects]=id,name,company&fields[companies]=id,name&filter[budgets_and_deals]=true&filter[time_tracking_enabled]=true&filter[bookable_date]=${day}&filter[person_id]=${person}${queryPart}&include=deal.company,deal.project.company,section.deal.project.company&page=1&per_page=200&sort=company,project_name,budget,section_position,position`;
 }
 
 type DraftNode =
@@ -167,6 +168,7 @@ export function parseServiceCatalog(json: unknown): ServiceCatalog {
   const list = parseJsonApiDataList(json) ?? [];
   const included = parseJsonApiIncluded(json);
   const roots: DraftNode[] = [];
+  const seenIds = new Set<ServiceId>();
   let serviceCount = 0;
   for (const item of list) {
     const resource = parseJsonApiResource(item);
@@ -177,6 +179,10 @@ export function parseServiceCatalog(json: unknown): ServiceCatalog {
     if (!id) {
       continue;
     }
+    if (seenIds.has(id)) {
+      continue;
+    }
+    seenIds.add(id);
     const service: TrackableService = {
       id,
       name: readStringAttribute(resource.attributes, "name"),

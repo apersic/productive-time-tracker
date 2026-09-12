@@ -20,6 +20,7 @@ export function ServiceField(props: {
 }): ReactElement {
   const { picker } = props;
   const triggerWrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const open = picker.lifecycle.kind === "open";
@@ -69,6 +70,7 @@ export function ServiceField(props: {
       if (event.key === "Escape") {
         event.preventDefault();
         picker.close();
+        triggerRef.current?.focus();
         return;
       }
       if (event.key !== "ArrowDown" && event.key !== "ArrowUp") {
@@ -108,6 +110,7 @@ export function ServiceField(props: {
       <Field.Label>Service</Field.Label>
       <Box ref={triggerWrapRef} width="full" position="relative">
         <Button
+          ref={triggerRef}
           type="button"
           role="combobox"
           aria-label="Service"
@@ -179,6 +182,7 @@ export function ServiceField(props: {
                   props.onSelect(service);
                   picker.select(service);
                   picker.close();
+                  triggerRef.current?.focus();
                 }}
               />
             </Box>

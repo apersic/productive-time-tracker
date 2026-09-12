@@ -6,6 +6,7 @@ import {
   catalogRows,
   catalogWithPinned,
   emptyServiceCatalog,
+  openedByDefault,
   serviceAvailability,
   serviceGroupId,
   type ServiceCatalog,
@@ -58,6 +59,32 @@ QUnit.test(
             id: "svc-1",
             type: "services",
             attributes: { name: "Development" },
+          },
+        ],
+      }),
+      {
+        roots: [{ kind: "service", service: development }],
+        serviceCount: 1,
+      },
+    );
+  },
+);
+
+QUnit.test(
+  "duplicate service ids keep the first leaf and count once",
+  (assert) => {
+    assert.deepEqual(
+      parseServiceCatalog({
+        data: [
+          {
+            id: "svc-1",
+            type: "services",
+            attributes: { name: "Development" },
+          },
+          {
+            id: "svc-1",
+            type: "services",
+            attributes: { name: "Other" },
           },
         ],
       }),
@@ -548,6 +575,60 @@ QUnit.test(
   },
 );
 
+QUnit.module("openedByDefault");
+
+QUnit.test(
+  "opens a group whose only child is another group, and leaves a two-deal company closed",
+  (assert) => {
+    const companySolo = serviceGroupId(["company:c1"]);
+    const dealSolo = serviceGroupId(["company:c1", "deal:d1"]);
+    const companyMany = serviceGroupId(["company:c2"]);
+    const catalog: ServiceCatalog = {
+      roots: [
+        {
+          kind: "group",
+          id: companySolo,
+          level: "company",
+          label: "Solo",
+          children: [
+            {
+              kind: "group",
+              id: dealSolo,
+              level: "deal",
+              label: "Only deal",
+              children: [{ kind: "service", service: development }],
+            },
+          ],
+        },
+        {
+          kind: "group",
+          id: companyMany,
+          level: "company",
+          label: "Many",
+          children: [
+            {
+              kind: "group",
+              id: serviceGroupId(["company:c2", "deal:d2"]),
+              level: "deal",
+              label: "Deal A",
+              children: [{ kind: "service", service: development }],
+            },
+            {
+              kind: "group",
+              id: serviceGroupId(["company:c2", "deal:d3"]),
+              level: "deal",
+              label: "Deal B",
+              children: [{ kind: "service", service: design }],
+            },
+          ],
+        },
+      ],
+      serviceCount: 3,
+    };
+    assert.deepEqual([...openedByDefault(catalog)], [companySolo]);
+  },
+);
+
 QUnit.module("serviceCatalogPath");
 
 QUnit.test(
@@ -556,7 +637,7 @@ QUnit.test(
     const person = personId("1439113");
     const bookable = day("2026-09-11");
     const emptyQuery =
-      "/services?fields[services]=id,name,billable_time,estimated_time,worked_time,budgeted_time,quantity,unit_id,position,billing_type_id,section,deal,time_tracking_enabled&fields[deals]=id,name,suffix,man_day_minutes,budget,project,company,organization,date,end_date,rounding_method_id,rounding_interval_id&fields[sections]=id,name,position,deal&fields[projects]=id,name,created_at,company&fields[companies]=id,name,avatar_url&fields[organizations]=id,name,avatar_url&filter[budgets_and_deals]=true&filter[time_tracking_enabled]=true&filter[bookable_date]=2026-09-11&filter[person_id]=1439113&include=deal.company,deal.subsidiary,deal.project.company,section.deal&page=1&per_page=200&sort=company,project_name,budget,section_position,position";
+      "/services?fields[services]=id,name,section,deal&fields[deals]=id,name,suffix,project,company&fields[sections]=id,name,deal&fields[projects]=id,name,company&fields[companies]=id,name&filter[budgets_and_deals]=true&filter[time_tracking_enabled]=true&filter[bookable_date]=2026-09-11&filter[person_id]=1439113&include=deal.company,deal.project.company,section.deal.project.company&page=1&per_page=200&sort=company,project_name,budget,section_position,position";
     assert.strictEqual(
       serviceCatalogPath({ personId: person, day: bookable, query: undefined }),
       emptyQuery,
@@ -567,7 +648,7 @@ QUnit.test(
     );
     assert.strictEqual(
       serviceCatalogPath({ personId: person, day: bookable, query: "asd" }),
-      "/services?fields[services]=id,name,billable_time,estimated_time,worked_time,budgeted_time,quantity,unit_id,position,billing_type_id,section,deal,time_tracking_enabled&fields[deals]=id,name,suffix,man_day_minutes,budget,project,company,organization,date,end_date,rounding_method_id,rounding_interval_id&fields[sections]=id,name,position,deal&fields[projects]=id,name,created_at,company&fields[companies]=id,name,avatar_url&fields[organizations]=id,name,avatar_url&filter[budgets_and_deals]=true&filter[time_tracking_enabled]=true&filter[bookable_date]=2026-09-11&filter[person_id]=1439113&filter[query]=asd&include=deal.company,deal.subsidiary,deal.project.company,section.deal&page=1&per_page=200&sort=company,project_name,budget,section_position,position",
+      "/services?fields[services]=id,name,section,deal&fields[deals]=id,name,suffix,project,company&fields[sections]=id,name,deal&fields[projects]=id,name,company&fields[companies]=id,name&filter[budgets_and_deals]=true&filter[time_tracking_enabled]=true&filter[bookable_date]=2026-09-11&filter[person_id]=1439113&filter[query]=asd&include=deal.company,deal.project.company,section.deal.project.company&page=1&per_page=200&sort=company,project_name,budget,section_position,position",
     );
   },
 );

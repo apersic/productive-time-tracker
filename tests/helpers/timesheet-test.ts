@@ -155,6 +155,30 @@ QUnit.test(
   },
 );
 
+QUnit.test(
+  "copyOfferResolved makes the empty-day copy action available",
+  (assert) => {
+    const tenth = day("2026-09-10");
+    const empty = applyFact(initialDayTimesheet(tenth), {
+      kind: "firstPageArrived",
+      day: tenth,
+      rows: [],
+      next: undefined,
+      running: [],
+    });
+    const next = applyFact(empty, {
+      kind: "copyOfferResolved",
+      day: tenth,
+      from: day("2026-09-09"),
+      available: true,
+    });
+    assert.deepEqual(next.entries, {
+      status: "empty",
+      copy: { kind: "available", from: day("2026-09-09") },
+    });
+  },
+);
+
 QUnit.test("firstPageArrived with rows becomes ready", (assert) => {
   const tenth = day("2026-09-10");
   const row = sampleEntry();
