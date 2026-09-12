@@ -2,7 +2,7 @@
 
 A React app that runs in the browser. You log in with a Productive API token and organization ID, then manage time entries for one day.
 
-Each new entry has duration, a service, and a multiline note. The person on the entry is the logged-in user. You can create an entry, list the entries for the selected day, start and stop a timer, edit an entry, delete an entry, and copy tasks from the previous day.
+Each new entry has duration, a service, and a multiline note. Edit can also change the date. The person on the entry is the logged-in user. You can create an entry, list the entries for the selected day, start and stop a timer, edit an entry, delete an entry, and copy tasks from the previous day.
 
 Frontend architecture, UI components, Productive API usage, and documented assumptions are in [specification.md](specification.md).
 
