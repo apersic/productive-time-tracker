@@ -156,10 +156,7 @@ export async function startTimer(args: {
   if (!timer) {
     return {
       ok: false,
-      error: {
-        kind: "invalid",
-        message: "Productive returned a bad timer.",
-      },
+      error: "badTimer",
     };
   }
   return { ok: true, timer };
@@ -186,10 +183,7 @@ export async function stopTimer(args: {
   if (result.status === 404 || result.status === 409 || result.status === 422) {
     return {
       ok: false,
-      error: {
-        kind: "rejected",
-        message: "This timer was already stopped.",
-      },
+      error: "timerAlreadyStopped",
     };
   }
   return result;

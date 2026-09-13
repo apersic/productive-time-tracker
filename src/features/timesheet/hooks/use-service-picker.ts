@@ -7,6 +7,7 @@ import type {
   ServicesList,
   TrackableService,
 } from "../service-catalog.ts";
+import { timesheetFailureKind } from "../timesheet-model.ts";
 import {
   availabilityFrom,
   initialPickerState,
@@ -85,7 +86,7 @@ export function useServicePicker(args: {
           return;
         }
         if (!result.ok) {
-          if (result.error.kind === "unauthorized") {
+          if (timesheetFailureKind(result.error) === "unauthorized") {
             onUnauthorized();
             return;
           }
@@ -137,7 +138,7 @@ export function useServicePicker(args: {
         return;
       }
       if (!result.ok) {
-        if (result.error.kind === "unauthorized") {
+        if (timesheetFailureKind(result.error) === "unauthorized") {
           onUnauthorized();
           return;
         }

@@ -20,11 +20,16 @@ import {
   type SubmitEvent,
 } from "react";
 import { Navigate, useNavigate } from "react-router";
-import { parseAccessToken, parseOrganizationId, useAuth } from "../lib/auth";
-import { PageHeading, SITE_NAME } from "../lib/document";
-import { Card } from "../ui";
 import {
-  fieldIssueMessage,
+  parseAccessToken,
+  parseOrganizationId,
+  useAuth,
+  type AuthError,
+} from "../lib/auth";
+import { useCopy } from "../lib/copy";
+import { PageHeading, SITE_NAME } from "../lib/document";
+import { Card, LanguagePicker } from "../ui";
+import {
   FieldWarning,
   focusFirstInvalid,
   presenceIssue,
@@ -32,7 +37,10 @@ import {
 } from "../lib/forms";
 import { EyeIcon, EyeOffIcon } from "../lib/icons";
 
+type LoginFailure = AuthError | "missingFields";
+
 export function LoginPage() {
+  const copy = useCopy();
   const { session, login } = useAuth();
   const navigate = useNavigate();
   const [organizationId, setOrganizationId] = useState("");
@@ -44,7 +52,7 @@ export function LoginPage() {
   const [tokenIssue, setTokenIssue] = useState<FieldIssue | undefined>(
     undefined,
   );
-  const [error, setError] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<LoginFailure | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [submitFailed, setSubmitFailed] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -67,7 +75,12 @@ export function LoginPage() {
           <Card>
             <Stack gap="5">
               <LoginIntro />
-              <Stack gap="5" role="status" aria-busy aria-label="Loading…">
+              <Stack
+                gap="5"
+                role="status"
+                aria-busy
+                aria-label={copy.login.loading}
+              >
                 <Skeleton height="10" borderRadius="md" />
                 <Skeleton height="10" borderRadius="md" />
                 <Skeleton height="10" borderRadius="md" />
@@ -90,11 +103,16 @@ export function LoginPage() {
 
   const restoreError =
     session.kind === "unavailable"
-      ? session.error.message
+      ? copy.failure[session.error]
       : session.kind === "expired"
-        ? "Your session expired. Log in again."
+        ? copy.notice.sessionExpired
         : undefined;
-  const formError = error ?? restoreError;
+  const formError =
+    error === undefined
+      ? restoreError
+      : error === "missingFields"
+        ? copy.login.missingFields
+        : copy.failure[error];
 
   async function onSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -113,7 +131,7 @@ export function LoginPage() {
     const parsedOrganizationId = parseOrganizationId(organizationId);
     const parsedAccessToken = parseAccessToken(accessToken);
     if (!parsedOrganizationId || !parsedAccessToken) {
-      setError("Enter an API token and an organization ID.");
+      setError("missingFields");
       return;
     }
     setSubmitting(true);
@@ -124,7 +142,7 @@ export function LoginPage() {
         accessToken: parsedAccessToken,
       });
       if (!result.ok) {
-        setError(result.error.message);
+        setError(result.error);
         return;
       }
       void navigate("/", { replace: true });
@@ -145,7 +163,7 @@ export function LoginPage() {
           <Stack gap="5">
             <LoginIntro />
             <Field.Root required invalid={organizationIssue !== undefined}>
-              <Field.Label>Organization ID</Field.Label>
+              <Field.Label>{copy.login.organizationLabel}</Field.Label>
               <InputGroup
                 endElement={organizationIssue ? <FieldWarning /> : undefined}
               >
@@ -161,17 +179,17 @@ export function LoginPage() {
                   }}
                   autoComplete="username"
                   spellCheck={false}
-                  placeholder="12345…"
+                  placeholder={copy.login.organizationPlaceholder}
                 />
               </InputGroup>
               {organizationIssue ? (
                 <Field.ErrorText>
-                  {fieldIssueMessage(organizationIssue)}
+                  {copy.fieldIssue[organizationIssue]}
                 </Field.ErrorText>
               ) : null}
             </Field.Root>
             <Field.Root required invalid={tokenIssue !== undefined}>
-              <Field.Label>API token</Field.Label>
+              <Field.Label>{copy.login.tokenLabel}</Field.Label>
               <InputGroup
                 endElement={
                   <Flex align="center" gap="1">
@@ -181,7 +199,9 @@ export function LoginPage() {
                       variant="ghost"
                       size="xs"
                       aria-label={
-                        accessTokenVisible ? "Hide token" : "Show token"
+                        accessTokenVisible
+                          ? copy.login.hideToken
+                          : copy.login.showToken
                       }
                       onClick={() =>
                         setAccessTokenVisible((visible) => !visible)
@@ -205,13 +225,11 @@ export function LoginPage() {
                   }}
                   autoComplete="current-password"
                   spellCheck={false}
-                  placeholder="Paste your token…"
+                  placeholder={copy.login.tokenPlaceholder}
                 />
               </InputGroup>
               {tokenIssue ? (
-                <Field.ErrorText>
-                  {fieldIssueMessage(tokenIssue)}
-                </Field.ErrorText>
+                <Field.ErrorText>{copy.fieldIssue[tokenIssue]}</Field.ErrorText>
               ) : null}
             </Field.Root>
             {formError ? (
@@ -225,7 +243,7 @@ export function LoginPage() {
               loading={submitting}
               width="full"
             >
-              Log in
+              {copy.login.submit}
             </Button>
           </Stack>
         </Card>
@@ -235,11 +253,12 @@ export function LoginPage() {
 }
 
 function LoginIntro(): ReactElement {
+  const copy = useCopy();
   return (
     <Stack gap="3">
       <PageHeading page="login" as="h2" />
       <Text color="fg.muted" textStyle="sm" maxW="65ch">
-        Enter your Productive API token and organization ID.
+        {copy.login.intro}
       </Text>
     </Stack>
   );
@@ -256,6 +275,7 @@ function LoginChrome(props: { children: ReactElement }) {
       color="fg"
       align="center"
       justify="center"
+      position="relative"
       css={{
         paddingTop: "max(2.5rem, env(safe-area-inset-top))",
         paddingBottom: "max(2.5rem, env(safe-area-inset-bottom))",
@@ -267,6 +287,15 @@ function LoginChrome(props: { children: ReactElement }) {
         },
       }}
     >
+      <Box
+        position="absolute"
+        css={{
+          top: "max(0.75rem, env(safe-area-inset-top))",
+          right: "max(1rem, env(safe-area-inset-right))",
+        }}
+      >
+        <LanguagePicker />
+      </Box>
       <Box w="full" maxW="md">
         <Stack gap="8" w="full" css={{ touchAction: "manipulation" }}>
           <Heading

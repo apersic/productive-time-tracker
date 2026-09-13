@@ -1,4 +1,4 @@
-import type { AuthError, Session } from "./session.ts";
+import { authFailureKind, type AuthError, type Session } from "./session.ts";
 
 export type AuthenticateResult =
   | { ok: true; session: Extract<Session, { kind: "authenticated" }> }
@@ -16,14 +16,15 @@ export function restoreOutcome(result: AuthenticateResult): RestoreOutcome {
   if (result.ok) {
     return { kind: "authenticated", session: result.session };
   }
-  switch (result.error.kind) {
+  const kind = authFailureKind(result.error);
+  switch (kind) {
     case "unauthorized":
       return { kind: "forget" };
     case "network":
     case "invalid":
       return { kind: "unavailable", error: result.error };
     default: {
-      const _exhaustive: never = result.error.kind;
+      const _exhaustive: never = kind;
       return _exhaustive;
     }
   }

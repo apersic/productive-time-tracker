@@ -1,10 +1,7 @@
 import { Box, Button, Field, Flex, Input, Text } from "@chakra-ui/react";
 import { useEffect, useRef, type ReactElement } from "react";
-import {
-  FieldWarning,
-  fieldIssueMessage,
-  type FieldIssue,
-} from "../../lib/forms";
+import { FieldWarning, type FieldIssue } from "../../lib/forms";
+import { useCopy } from "../../lib/copy";
 import { ChevronIcon } from "../../lib/icons";
 import type { ServicePicker } from "../../features/timesheet";
 import type {
@@ -19,6 +16,7 @@ export function ServiceField(props: {
   onSelect: (service: TrackableService) => void;
 }): ReactElement {
   const { picker } = props;
+  const copy = useCopy();
   const triggerWrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -107,13 +105,13 @@ export function ServiceField(props: {
 
   return (
     <Field.Root required invalid={props.issue !== undefined} width="full">
-      <Field.Label>Service</Field.Label>
+      <Field.Label>{copy.service.label}</Field.Label>
       <Box ref={triggerWrapRef} width="full" position="relative">
         <Button
           ref={triggerRef}
           type="button"
           role="combobox"
-          aria-label="Service"
+          aria-label={copy.service.label}
           aria-expanded={open}
           aria-haspopup="listbox"
           aria-invalid={props.issue !== undefined}
@@ -139,7 +137,7 @@ export function ServiceField(props: {
           <Text truncate color={selectedName ? undefined : "fg.subtle"}>
             {selectedName && selectedName.length > 0
               ? selectedName
-              : "Select a service"}
+              : copy.service.select}
           </Text>
         </Button>
         {open ? (
@@ -165,14 +163,14 @@ export function ServiceField(props: {
                 onChange={(event) => {
                   picker.setQuery(event.target.value);
                 }}
-                placeholder="Search services"
-                aria-label="Search services"
+                placeholder={copy.service.search}
+                aria-label={copy.service.search}
                 autoComplete="off"
               />
             </Box>
             <Box
               role="listbox"
-              aria-label="Service"
+              aria-label={copy.service.label}
               maxH="20rem"
               overflowY="auto"
             >
@@ -192,7 +190,7 @@ export function ServiceField(props: {
       {props.issue ? (
         <Flex align="center" gap="1">
           <FieldWarning />
-          <Field.ErrorText>{fieldIssueMessage(props.issue)}</Field.ErrorText>
+          <Field.ErrorText>{copy.fieldIssue[props.issue]}</Field.ErrorText>
         </Flex>
       ) : null}
     </Field.Root>
@@ -204,17 +202,18 @@ function ListingBody(props: {
   onSelect: (service: TrackableService) => void;
 }): ReactElement {
   const { listing } = props.picker;
+  const copy = useCopy();
   switch (listing.kind) {
     case "loading":
       return (
         <Text px="3" py="2" color="fg.muted">
-          Loading services
+          {copy.service.loading}
         </Text>
       );
     case "failed":
       return (
         <Text px="3" py="2" color="fg.error" role="alert">
-          {listing.error.message}
+          {copy.failure[listing.error]}
         </Text>
       );
     case "empty":
@@ -222,13 +221,13 @@ function ListingBody(props: {
         case "noMatches":
           return (
             <Text px="3" py="2" color="fg.muted">
-              No matching services
+              {copy.service.noMatches}
             </Text>
           );
         case "noServices":
           return (
             <Text px="3" py="2" color="fg.muted">
-              No services
+              {copy.service.none}
             </Text>
           );
         default: {
@@ -253,7 +252,7 @@ function ListingBody(props: {
       return (
         <>
           <Text px="3" py="2" color="fg.error" role="alert">
-            {listing.error.message}
+            {copy.failure[listing.error]}
           </Text>
           {listing.rows.map((row) => (
             <CatalogRow
@@ -291,6 +290,7 @@ function CatalogRow(props: {
   onSelect: (service: TrackableService) => void;
 }): ReactElement {
   const { row } = props;
+  const copy = useCopy();
   switch (row.kind) {
     case "group":
       return (
@@ -316,7 +316,9 @@ function CatalogRow(props: {
           >
             <ChevronIcon />
           </Box>
-          <Text truncate>{row.label}</Text>
+          <Text truncate>
+            {row.level === "pinned" ? copy.service.current : row.label}
+          </Text>
           {row.expanded ? null : (
             <Text color="fg.muted" fontWeight="normal">
               {row.serviceCount}

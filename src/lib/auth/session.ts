@@ -12,10 +12,45 @@ export type Person = {
   displayName: string;
 };
 
-export type AuthError = {
-  kind: "unauthorized" | "network" | "invalid";
-  message: string;
-};
+export type AuthError =
+  | "unreachable"
+  | "badCredentials"
+  | "sessionRejected"
+  | "requestRejected"
+  | "badResponse"
+  | "manyUsers"
+  | "noUser"
+  | "noUserEmail"
+  | "manyPeople"
+  | "noPerson"
+  | "badTimeEntry"
+  | "badTimer";
+
+export type AuthErrorKind = "unauthorized" | "network" | "invalid";
+
+export function authFailureKind(error: AuthError): AuthErrorKind {
+  switch (error) {
+    case "unreachable":
+      return "network";
+    case "badCredentials":
+    case "sessionRejected":
+      return "unauthorized";
+    case "requestRejected":
+    case "badResponse":
+    case "manyUsers":
+    case "noUser":
+    case "noUserEmail":
+    case "manyPeople":
+    case "noPerson":
+    case "badTimeEntry":
+    case "badTimer":
+      return "invalid";
+    default: {
+      const _exhaustive: never = error;
+      return _exhaustive;
+    }
+  }
+}
 
 export type Session =
   | { kind: "booting" }

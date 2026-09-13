@@ -1,4 +1,5 @@
 import { Flex, IconButton } from "@chakra-ui/react";
+import { useCopy } from "../../lib/copy";
 import {
   nextCalendarDay,
   previousCalendarDay,
@@ -12,6 +13,7 @@ export function DayField(props: {
   value: CalendarDay;
   onChange: (day: CalendarDay) => void;
 }) {
+  const copy = useCopy();
   const today = todayLocal();
 
   return (
@@ -21,7 +23,7 @@ export function DayField(props: {
           type="button"
           variant="ghost"
           colorPalette="blue"
-          aria-label="Previous day"
+          aria-label={copy.form.previousDay}
           onClick={() => {
             props.onChange(previousCalendarDay(props.value));
           }}
@@ -34,7 +36,7 @@ export function DayField(props: {
           type="button"
           variant="ghost"
           colorPalette="blue"
-          aria-label="Today"
+          aria-label={copy.form.today}
           onClick={() => {
             props.onChange(today);
           }}
@@ -54,7 +56,7 @@ export function DayField(props: {
           type="button"
           variant="ghost"
           colorPalette="blue"
-          aria-label="Next day"
+          aria-label={copy.form.nextDay}
           onClick={() => {
             props.onChange(nextCalendarDay(props.value));
           }}
@@ -65,7 +67,7 @@ export function DayField(props: {
       <CalendarDayPicker
         value={props.value}
         onChange={props.onChange}
-        label="Day"
+        label={copy.form.day}
         labelHidden
       />
     </Flex>

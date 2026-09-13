@@ -7,7 +7,7 @@ import {
   type LogoutArgs,
   type Person,
 } from "../lib/auth";
-import { pageHeading } from "../lib/document";
+import { useCopy } from "../lib/copy";
 import { entryFieldsFrom } from "../features/timesheet";
 import { resolveEditEntryRoute, type EditEntryRoute } from "../features/edit";
 import { dayMoved, useEditEntry } from "../features/edit/hooks";
@@ -21,9 +21,8 @@ import {
 } from "../ui";
 import type { CalendarDay } from "../lib/time/calendar-day.ts";
 
-const FORM_PENDING_NAME = "Loading time entry";
-
 export function EditEntryPage() {
+  const copy = useCopy();
   const { session, logout } = useAuth();
   const navigate = useNavigate();
   const { entryId } = useParams();
@@ -37,7 +36,7 @@ export function EditEntryPage() {
           <Stack
             as="main"
             id="main"
-            aria-label={pageHeading("editEntry")}
+            aria-label={copy.page.editEntry}
             gap="6"
             w="full"
             px="4"
@@ -81,6 +80,7 @@ export function EditEntryPage() {
 }
 
 function EditEntryLoadingBody(props: { day?: CalendarDay }): ReactElement {
+  const copy = useCopy();
   return (
     <Stack gap="4">
       <BackHomeLink day={props.day} />
@@ -88,7 +88,7 @@ function EditEntryLoadingBody(props: { day?: CalendarDay }): ReactElement {
         gap="4"
         role="status"
         aria-busy="true"
-        aria-label={FORM_PENDING_NAME}
+        aria-label={copy.edit.loading}
       >
         <EntryFormSkeleton />
       </Stack>
@@ -118,6 +118,7 @@ function AuthenticatedEditEntry(props: {
   logout: (args?: LogoutArgs) => void;
   route: EditEntryRoute;
 }) {
+  const copy = useCopy();
   const { page, picker, save, selectDay } = useEditEntry({
     credentials: props.credentials,
     person: props.person,
@@ -135,7 +136,7 @@ function AuthenticatedEditEntry(props: {
       body = (
         <Stack gap="4">
           <BackHomeLink />
-          <Text>This time entry was not found.</Text>
+          <Text>{copy.edit.notFound}</Text>
         </Stack>
       );
       break;
@@ -147,7 +148,7 @@ function AuthenticatedEditEntry(props: {
         <Stack gap="4">
           <BackHomeLink />
           <Text color="fg.error" role="alert">
-            {page.error.message}
+            {copy.failure[page.error]}
           </Text>
         </Stack>
       );
@@ -161,7 +162,7 @@ function AuthenticatedEditEntry(props: {
             key={page.session.entry.id}
             initial={entryFieldsFrom(page.session.entry)}
             day={{ value: page.session.day, select: selectDay }}
-            submitLabel="Save changes"
+            submitLabel={copy.edit.save}
             picker={picker}
             submitting={page.kind === "saving"}
             blocked={false}
@@ -184,7 +185,7 @@ function AuthenticatedEditEntry(props: {
       <Stack
         as="main"
         id="main"
-        aria-label={pageHeading("editEntry")}
+        aria-label={copy.page.editEntry}
         gap="6"
         w="full"
         px="4"

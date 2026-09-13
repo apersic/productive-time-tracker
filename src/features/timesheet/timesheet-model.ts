@@ -1,4 +1,8 @@
-import type { AuthError } from "../../lib/auth/session.ts";
+import {
+  authFailureKind,
+  type AuthError,
+  type AuthErrorKind,
+} from "../../lib/auth/session.ts";
 import type { CalendarDay } from "../../lib/time/calendar-day.ts";
 import { parseMinutes, type Minutes } from "../../lib/time/duration.ts";
 import { noteIdentity, type EntryNote } from "./entry-note.ts";
@@ -9,10 +13,35 @@ export type TaskId = string & { readonly __brand: "TaskId" };
 export type ProjectId = string & { readonly __brand: "ProjectId" };
 export type TimerId = string & { readonly __brand: "TimerId" };
 
-export type TimesheetError = {
-  kind: AuthError["kind"] | "rejected";
-  message: string;
-};
+export type RejectedError =
+  | "timerAlreadyStopped"
+  | "entryNotUpdatable"
+  | "entryGone"
+  | "entryNotDeletable"
+  | "dayStillLoading"
+  | "dayChangedWhileSaving"
+  | "dayChangedWhileDeleting";
+
+export type TimesheetError = AuthError | RejectedError;
+
+export type TimesheetErrorKind = AuthErrorKind | "rejected";
+
+export function timesheetFailureKind(
+  error: TimesheetError,
+): TimesheetErrorKind {
+  switch (error) {
+    case "timerAlreadyStopped":
+    case "entryNotUpdatable":
+    case "entryGone":
+    case "entryNotDeletable":
+    case "dayStillLoading":
+    case "dayChangedWhileSaving":
+    case "dayChangedWhileDeleting":
+      return "rejected";
+    default:
+      return authFailureKind(error);
+  }
+}
 
 export type TimeEntry = {
   id: TimeEntryId;

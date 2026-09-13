@@ -5,14 +5,15 @@ import { announce } from "../../../lib/notice";
 import type { CalendarDay } from "../../../lib/time/calendar-day.ts";
 import { fetchTimeEntry, updateTimeEntry } from "../../../providers/productive";
 import { useServicePicker } from "../../timesheet/hooks/use-service-picker.ts";
-import type {
-  EntryDraft,
-  PickerContext,
-  ServicePicker,
-  TimeEntry,
-  TimeEntryId,
-  TimesheetError,
-  TrackableService,
+import {
+  timesheetFailureKind,
+  type EntryDraft,
+  type PickerContext,
+  type ServicePicker,
+  type TimeEntry,
+  type TimeEntryId,
+  type TimesheetError,
+  type TrackableService,
 } from "../../timesheet";
 import { homeReturnState, type EditEntryRoute } from "..";
 
@@ -207,7 +208,7 @@ export function useEditEntry(args: {
         return;
       }
       if (!result.ok) {
-        if (result.error.kind === "unauthorized") {
+        if (timesheetFailureKind(result.error) === "unauthorized") {
           announce({ op: "sessionExpired" });
           argsRef.current.logout({ reason: "expired" });
           return;
@@ -253,7 +254,7 @@ export function useEditEntry(args: {
         return false;
       }
       if (!result.ok) {
-        if (result.error.kind === "unauthorized") {
+        if (timesheetFailureKind(result.error) === "unauthorized") {
           announce({ op: "sessionExpired" });
           argsRef.current.logout({ reason: "expired" });
           return false;

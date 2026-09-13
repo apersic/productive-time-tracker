@@ -1,6 +1,6 @@
 import { DatePicker, Portal, parseDate } from "@chakra-ui/react";
+import { useCopy } from "../../lib/copy";
 import {
-  formatCalendarDayLabel,
   parseCalendarDay,
   type CalendarDay,
 } from "../../lib/time/calendar-day.ts";
@@ -14,6 +14,7 @@ export function CalendarDayPicker(props: {
   labelHidden?: boolean;
   width?: "auto" | "full";
 }) {
+  const copy = useCopy();
   const selected = parseDate(props.value);
   const width = props.width ?? "auto";
 
@@ -27,7 +28,7 @@ export function CalendarDayPicker(props: {
       disabled={props.disabled}
       format={(date) => {
         const day = parseCalendarDay(date.toString());
-        return day ? formatCalendarDayLabel(day) : date.toString();
+        return day ? copy.dayLabel(day) : date.toString();
       }}
       parse={(value) => {
         const day = parseCalendarDay(value);
@@ -56,7 +57,7 @@ export function CalendarDayPicker(props: {
           w={width}
         />
         <DatePicker.IndicatorGroup>
-          <DatePicker.Trigger type="button" aria-label="Open calendar">
+          <DatePicker.Trigger type="button" aria-label={copy.form.openCalendar}>
             <CalendarIcon />
           </DatePicker.Trigger>
         </DatePicker.IndicatorGroup>
