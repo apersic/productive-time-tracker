@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
+  nextCalendarDay,
+  previousCalendarDay,
+  todayLocal,
+  type CalendarDay,
+} from "../../src/lib/time/calendar-day.ts";
+import {
+  browserCalendarDayLabel,
   createdEntryResponse,
   jsonApiAttribute,
   jsonApiHeaders,
@@ -20,6 +27,14 @@ import {
 
 async function storedCredentials(page: Page) {
   return page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY);
+}
+
+function sameMonthNeighbor(day: CalendarDay): CalendarDay {
+  const next = nextCalendarDay(day);
+  if (next.slice(0, 7) === day.slice(0, 7)) {
+    return next;
+  }
+  return previousCalendarDay(day);
 }
 
 test("guest visiting home is sent to login", async ({ page }) => {
@@ -99,6 +114,55 @@ test("creating an entry posts the form and shows the row", async ({ page }) => {
   ).toBeVisible();
   await expect(page.locator('input[name="duration"]')).toHaveValue("");
   await expect(editor).toHaveClass(/is-empty/);
+});
+
+test("changing the create Date posts that day", async ({ page }) => {
+  let posted: unknown;
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await page.route("**/api/v2/time_entries**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      posted = request.postDataJSON();
+      await route.fulfill({
+        ...jsonApiHeaders(),
+        status: 201,
+        body: JSON.stringify(createdEntryResponse(posted)),
+      });
+      return;
+    }
+    await route.fulfill({
+      ...jsonApiHeaders(),
+      body: JSON.stringify(jsonApiEmptyList()),
+    });
+  });
+  await openHome(page);
+  const createForm = page.locator("form");
+  const chosen = sameMonthNeighbor(todayLocal());
+  const chosenLabel = await browserCalendarDayLabel(page, chosen);
+  await createForm.getByRole("button", { name: "Open calendar" }).click();
+  await expect(
+    page.getByRole("application", { name: "calendar" }),
+  ).toBeVisible();
+  await page
+    .getByRole("application", { name: "calendar" })
+    .getByRole("button", { name: chosenLabel })
+    .click();
+  await expect(
+    page.getByRole("heading", {
+      name: `There's no tracked time for ${chosenLabel}`,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Day" })).toHaveValue(
+    chosenLabel,
+  );
+  await expect(
+    createForm.getByRole("button", { name: "Add entry" }),
+  ).toBeEnabled();
+  await createForm.getByLabel("Duration").fill("1:30");
+  await createForm.getByRole("button", { name: "Add entry" }).click();
+  expect(jsonApiAttribute(posted, "date")).toBe(chosen);
 });
 
 test("Play posts a timer and Stop stops it", async ({ page }) => {
