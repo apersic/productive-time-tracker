@@ -44,10 +44,27 @@ QUnit.test("ready duration and one service yields a draft", (assert) => {
   );
 });
 
-QUnit.test("empty duration is a blank duration issue", (assert) => {
+QUnit.test("empty duration with a service logs 0 minutes", (assert) => {
   assert.deepEqual(
     parseEntryDraft({
       fields: { duration: "", service: development, note: emptyNote },
+      availability: { status: "one", service: development },
+    }),
+    {
+      ok: true,
+      draft: {
+        note: emptyNote,
+        logged: minutes(0),
+        service: development,
+      },
+    },
+  );
+});
+
+QUnit.test("invalid duration is a blank duration issue", (assert) => {
+  assert.deepEqual(
+    parseEntryDraft({
+      fields: { duration: "abc", service: development, note: emptyNote },
       availability: { status: "one", service: development },
     }),
     { ok: false, issues: { duration: "blank" } },
@@ -78,14 +95,14 @@ QUnit.test(
 );
 
 QUnit.test(
-  "empty duration and missing service report both issues",
+  "empty duration and missing service report only a service issue",
   (assert) => {
     assert.deepEqual(
       parseEntryDraft({
         fields: { duration: "", service: undefined, note: emptyNote },
         availability: { status: "many" },
       }),
-      { ok: false, issues: { duration: "blank", service: "blank" } },
+      { ok: false, issues: { service: "blank" } },
     );
   },
 );

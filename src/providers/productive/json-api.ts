@@ -169,17 +169,14 @@ export async function productiveRequest(args: {
   } catch {
     return {
       ok: false,
-      error: { kind: "network", message: "Could not reach Productive." },
+      error: "unreachable",
     };
   }
 
   if (response.status === 401 || response.status === 403) {
     return {
       ok: false,
-      error: {
-        kind: "unauthorized",
-        message: "Invalid token or organization ID.",
-      },
+      error: "badCredentials",
       status: response.status,
     };
   }
@@ -191,7 +188,7 @@ export async function productiveRequest(args: {
     }
     return {
       ok: false,
-      error: { kind: "invalid", message: "Productive rejected the request." },
+      error: "requestRejected",
       status: response.status,
     };
   }
@@ -202,17 +199,14 @@ export async function productiveRequest(args: {
   } catch {
     return {
       ok: false,
-      error: {
-        kind: "invalid",
-        message: "Productive returned a bad response.",
-      },
+      error: "badResponse",
     };
   }
 
   if (!response.ok) {
     return {
       ok: false,
-      error: { kind: "invalid", message: "Productive rejected the request." },
+      error: "requestRejected",
       status: response.status,
     };
   }

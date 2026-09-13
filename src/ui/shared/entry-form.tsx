@@ -19,11 +19,11 @@ import {
 import {
   durationFieldIssue,
   FieldWarning,
-  fieldIssueMessage,
   focusFirstInvalid,
   presenceIssue,
   type FieldIssue,
 } from "../../lib/forms";
+import { useCopy, type Copy } from "../../lib/copy";
 import {
   emptySpokenDuration,
   formatHhMm,
@@ -39,6 +39,7 @@ import {
   type EntryNote,
   type ServicePicker,
   type ServicesList,
+  type TimesheetError,
   type TrackableService,
 } from "../../features/timesheet";
 import type { CalendarDay } from "../../lib/time/calendar-day.ts";
@@ -52,22 +53,21 @@ export type EntryDayControl = {
   select: (day: CalendarDay) => void;
 };
 
-const DURATION_HINT = "Minutes or hh:mm, like 90 or 1:30";
-
 export function EntryFormSkeleton(): ReactElement {
+  const copy = useCopy();
   return (
     <Card aria-hidden>
       <Stack gap="4">
         <Field.Root>
-          <Field.Label>Date</Field.Label>
+          <Field.Label>{copy.form.date}</Field.Label>
           <Skeleton height="10" borderRadius="md" />
         </Field.Root>
         <Field.Root>
-          <Field.Label>Duration</Field.Label>
+          <Field.Label>{copy.form.duration}</Field.Label>
           <Skeleton height="10" borderRadius="md" />
         </Field.Root>
         <Field.Root>
-          <Field.Label>Description</Field.Label>
+          <Field.Label>{copy.form.description}</Field.Label>
           <Skeleton height="24" borderRadius="md" />
         </Field.Root>
         <Skeleton height="10" borderRadius="md" />
@@ -136,12 +136,13 @@ function formDisabled(args: {
 function loadingStatus(args: {
   blocked: boolean;
   availability: ServicesList;
+  copy: Copy;
 }): string | undefined {
   if (args.availability.status === "loading") {
-    return "Loading services";
+    return args.copy.form.loadingServices;
   }
   if (args.blocked) {
-    return "Loading time entries";
+    return args.copy.form.loadingEntries;
   }
   return undefined;
 }
@@ -153,10 +154,11 @@ export function EntryForm(props: {
   picker: ServicePicker;
   submitting: boolean;
   blocked: boolean;
-  error: string | undefined;
+  error: TimesheetError | undefined;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
   onDirtyChange?: (dirty: boolean) => void;
 }) {
+  const copy = useCopy();
   const [duration, setDuration] = useState(props.initial.duration);
   const [spoken, setSpoken] = useState(() =>
     spokenFromDuration(props.initial.duration),
@@ -184,6 +186,7 @@ export function EntryForm(props: {
   const pendingStatus = loadingStatus({
     blocked: props.blocked,
     availability,
+    copy,
   });
   const busy = pendingStatus !== undefined || props.submitting;
 
@@ -252,10 +255,12 @@ export function EntryForm(props: {
     setDurationIssue(issue);
     switch (draft.kind) {
       case "empty":
-      case "invalid":
         setDuration("");
         setSpoken(emptySpokenDuration);
-        return { value: "", draft: { kind: "empty" } };
+        return { value: "", draft };
+      case "invalid":
+        setSpoken(emptySpokenDuration);
+        return { value: raw, draft };
       case "tooLong":
         setSpoken(emptySpokenDuration);
         return { value: raw, draft };
@@ -318,20 +323,18 @@ export function EntryForm(props: {
         <Stack gap="4">
           {pendingStatus ? <Text role="status">{pendingStatus}</Text> : null}
           {availability.status === "none" ? (
-            <Text color="fg.error">
-              No services are available for time tracking.
-            </Text>
+            <Text color="fg.error">{copy.form.noTrackableServices}</Text>
           ) : null}
           {availability.status === "failed" ? (
             <Text color="fg.error" role="alert">
-              {availability.error.message}
+              {copy.failure[availability.error]}
             </Text>
           ) : null}
           {/* Changing day refetches services. formDisabled is true while that
               loads, so this row keys off submitting only. */}
           <Field.Root disabled={props.submitting} width="full">
             <CalendarDayPicker
-              label="Date"
+              label={copy.form.date}
               value={props.day.value}
               onChange={props.day.select}
               disabled={props.submitting}
@@ -350,12 +353,11 @@ export function EntryForm(props: {
             />
           ) : null}
           <Field.Root
-            required
             invalid={durationIssue !== undefined}
             disabled={disabled}
             width="full"
           >
-            <Field.Label>Duration</Field.Label>
+            <Field.Label>{copy.form.duration}</Field.Label>
             <InputGroup
               width="full"
               endElement={
@@ -382,19 +384,19 @@ export function EntryForm(props: {
                 onBlur={() => {
                   commitDuration(duration);
                 }}
-                placeholder="Time"
+                placeholder={copy.form.durationPlaceholder}
                 autoComplete="off"
               />
             </InputGroup>
-            <Field.HelperText>{DURATION_HINT}</Field.HelperText>
+            <Field.HelperText>{copy.form.durationHint}</Field.HelperText>
             {durationIssue ? (
               <Field.ErrorText>
-                {fieldIssueMessage(durationIssue)}
+                {copy.fieldIssue[durationIssue]}
               </Field.ErrorText>
             ) : null}
           </Field.Root>
           <Field.Root disabled={disabled}>
-            <Field.Label>Description</Field.Label>
+            <Field.Label>{copy.form.description}</Field.Label>
             <NoteEditor
               value={note}
               onChange={(next) => {
@@ -402,18 +404,18 @@ export function EntryForm(props: {
                 publishDirty({ note: next });
               }}
               disabled={disabled}
-              placeholder="Enter a description"
+              placeholder={copy.form.notePlaceholder}
             />
-            <Field.HelperText>Enter a description</Field.HelperText>
+            <Field.HelperText>{copy.form.noteHelper}</Field.HelperText>
           </Field.Root>
           {submitFailed ? (
             <Text id={summaryId} color="fg.error" role="alert">
-              Fix the highlighted fields.
+              {copy.form.fixHighlighted}
             </Text>
           ) : null}
           {props.error ? (
             <Text color="fg.error" role="alert">
-              {props.error}
+              {copy.failure[props.error]}
             </Text>
           ) : null}
           <Button

@@ -18,10 +18,10 @@ Auth is a discriminated `Session` in `src/lib/auth/session.ts`:
 - `booting` while stored credentials are checked
 - `anonymous` when there is no valid session
 - `expired` after a 401 or 403 on a later request. Login shows that the session ended.
-- `unavailable` when stored credentials could not be verified because Productive was unreachable or returned a non-auth error. The token stays in `localStorage`.
+- `unavailable` when stored credentials could not be verified because Productive was unreachable or returned a non-auth error. The token stays in `sessionStorage`.
 - `authenticated` with `credentials` and `person`
 
-Credentials are `{ organizationId, accessToken }`. They persist in `localStorage` under `productive-time-tracker.credentials` so a refresh keeps the user logged in. Restore clears that key only on HTTP 401 or 403. Network failures and invalid API payloads keep the stored token and send the user to login with an error. Log out removes that key and returns the session to `anonymous`, or to `expired` when logout was caused by a 401 or 403.
+Credentials are `{ organizationId, accessToken }`. They persist in `sessionStorage` under `productive-time-tracker.credentials` so a refresh keeps the user logged in. Restore clears that key only on HTTP 401 or 403. Network failures and invalid API payloads keep the stored token and send the user to login with an error. Log out removes that key and returns the session to `anonymous`, or to `expired` when logout was caused by a 401 or 403. Closing the tab clears `sessionStorage`.
 
 `src/providers/productive` is the only module that speaks JSON:API. It parses responses into domain types. UI code does not read `data.attributes`.
 

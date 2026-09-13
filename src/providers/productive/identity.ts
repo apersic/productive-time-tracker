@@ -10,20 +10,14 @@ export function currentUserFromPayload(
   if (!users.ok) {
     return {
       ok: false,
-      error: {
-        kind: "invalid",
-        message:
-          users.reason === "many"
-            ? "Productive returned more than one user."
-            : "Could not load the current user.",
-      },
+      error: users.reason === "many" ? "manyUsers" : "noUser",
     };
   }
   const email = readStringAttribute(users.resource.attributes, "email");
   if (email.length === 0) {
     return {
       ok: false,
-      error: { kind: "invalid", message: "The current user has no email." },
+      error: "noUserEmail",
     };
   }
   return { ok: true, email };
@@ -38,20 +32,14 @@ export function currentPersonFromPayload(args: {
   if (!people.ok) {
     return {
       ok: false,
-      error: {
-        kind: "invalid",
-        message:
-          people.reason === "many"
-            ? "Productive returned more than one person."
-            : "Could not load the current person.",
-      },
+      error: people.reason === "many" ? "manyPeople" : "noPerson",
     };
   }
   const personId = parsePersonId(people.resource.id);
   if (!personId) {
     return {
       ok: false,
-      error: { kind: "invalid", message: "Could not load the current person." },
+      error: "noPerson",
     };
   }
   const person: Person = {

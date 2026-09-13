@@ -22,6 +22,7 @@ import {
   type TimeEntry,
   type TimeEntryId,
   type TimesheetError,
+  timesheetFailureKind,
   type TimesheetFact,
 } from "..";
 import {
@@ -102,7 +103,7 @@ export function useDayTimesheet(args: {
   }, []);
 
   const onError = useCallback((error: TimesheetError): boolean => {
-    if (error.kind === "unauthorized") {
+    if (timesheetFailureKind(error) === "unauthorized") {
       announce({ op: "sessionExpired" });
       argsRef.current.logout({ reason: "expired" });
       return true;
@@ -131,10 +132,7 @@ export function useDayTimesheet(args: {
     personId: args.person.id,
     context: { kind: "ready", day: timesheet.day, pinned: undefined },
     onUnauthorized: () => {
-      onError({
-        kind: "unauthorized",
-        message: "Unauthorized.",
-      });
+      onError("sessionRejected");
     },
   });
 
@@ -312,7 +310,10 @@ export function useDayTimesheet(args: {
               credentials,
               timerId: from.timerId,
             });
-            if (!stopped.ok && stopped.error.kind !== "rejected") {
+            if (
+              !stopped.ok &&
+              timesheetFailureKind(stopped.error) !== "rejected"
+            ) {
               if (onError(stopped.error)) {
                 return;
               }
@@ -375,7 +376,7 @@ export function useDayTimesheet(args: {
     const { credentials } = argsRef.current;
     void stopTimer({ credentials, timerId: timer.timerId }).then(
       async (result) => {
-        if (!result.ok && result.error.kind !== "rejected") {
+        if (!result.ok && timesheetFailureKind(result.error) !== "rejected") {
           if (onError(result.error)) {
             return;
           }
@@ -387,7 +388,7 @@ export function useDayTimesheet(args: {
           announce({ op: "timer", result });
           return;
         }
-        if (!result.ok && result.error.kind === "rejected") {
+        if (!result.ok && timesheetFailureKind(result.error) === "rejected") {
           const { credentials: creds, person } = argsRef.current;
           const day = current.day;
           const [page, recovered] = await Promise.all([
@@ -471,10 +472,7 @@ export function useDayTimesheet(args: {
       if (timesheetRef.current.entries.status === "loading") {
         return {
           ok: false,
-          error: {
-            kind: "rejected",
-            message: "Wait until the day finishes loading.",
-          },
+          error: "dayStillLoading",
         };
       }
       const result = await createTimeEntry({
@@ -492,10 +490,7 @@ export function useDayTimesheet(args: {
         return result;
       }
       if (timesheetRef.current.day !== day) {
-        const error: TimesheetError = {
-          kind: "rejected",
-          message: "The day changed while this entry was saving.",
-        };
+        const error: TimesheetError = "dayChangedWhileSaving";
         announce({ op: "createEntry", result: { ok: false, error } });
         return { ok: false, error };
       }
@@ -520,10 +515,7 @@ export function useDayTimesheet(args: {
         return;
       }
       if (timesheetRef.current.day !== day) {
-        const error: TimesheetError = {
-          kind: "rejected",
-          message: "The day changed while this entry was deleting.",
-        };
+        const error: TimesheetError = "dayChangedWhileDeleting";
         announce({ op: "deleteEntry", result: { ok: false, error } });
         return;
       }

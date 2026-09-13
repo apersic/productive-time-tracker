@@ -34,7 +34,7 @@ import {
   type TimerControl,
 } from "../../features/timesheet";
 import { SITE_ICON_HREF } from "../../lib/document";
-import { formatCalendarDayLabel } from "../../lib/time/calendar-day.ts";
+import { useCopy, type Copy } from "../../lib/copy";
 import { formatHhMm } from "../../lib/time/duration.ts";
 import { Card } from "../shared";
 import { loadMoreControl } from "./load-more";
@@ -45,18 +45,18 @@ type ListOverlay =
   | { kind: "confirm"; entryId: TimeEntryId; title: string }
   | { kind: "deleting"; entryId: TimeEntryId; title: string };
 
-const LIST_PENDING_NAME = "Loading time entries";
 const LIST_PLACEHOLDER_COUNT = 3;
 const ROW_CONTROL_SIZE = "11";
 
 export function DayEntryListSkeleton(): ReactElement {
+  const copy = useCopy();
   return (
     <Stack
       gap="3"
       overflowY="hidden"
       role="status"
       aria-busy="true"
-      aria-label={LIST_PENDING_NAME}
+      aria-label={copy.home.loadingEntries}
     >
       {Array.from({ length: LIST_PLACEHOLDER_COUNT }, (_, index) => (
         <EntryRowSkeleton key={index} />
@@ -105,17 +105,19 @@ function copyButtonVisible(timesheet: DayTimesheet): boolean {
   }
 }
 
-function listAnnouncement(timesheet: DayTimesheet): string {
-  const day = formatCalendarDayLabel(timesheet.day);
+function listAnnouncement(timesheet: DayTimesheet, copy: Copy): string {
   switch (timesheet.entries.status) {
     case "loading":
-      return `Loading time entries for ${day}`;
+      return copy.home.listLoading(timesheet.day);
     case "failed":
-      return timesheet.entries.error.message;
+      return copy.failure[timesheet.entries.error];
     case "empty":
-      return `No tracked time for ${day}`;
+      return copy.home.listEmpty(timesheet.day);
     case "ready":
-      return `${timesheet.entries.rows.length} time entries for ${day}`;
+      return copy.home.listReady({
+        count: timesheet.entries.rows.length,
+        day: timesheet.day,
+      });
     default: {
       const _exhaustive: never = timesheet.entries;
       return _exhaustive;
@@ -171,6 +173,7 @@ function EntryMoreMenu(props: {
   onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
 }) {
+  const copy = useCopy();
   return (
     <Menu.Root
       positioning={{ placement: "bottom-end" }}
@@ -194,7 +197,7 @@ function EntryMoreMenu(props: {
           size="md"
           minW={ROW_CONTROL_SIZE}
           minH={ROW_CONTROL_SIZE}
-          aria-label={`More actions for ${props.title}`}
+          aria-label={copy.home.moreActions(props.title)}
           px="0"
         >
           <MoreIcon />
@@ -205,7 +208,7 @@ function EntryMoreMenu(props: {
           <Menu.Content minW="10rem">
             <Menu.Item value="edit" cursor="pointer">
               <EditIcon />
-              Edit
+              {copy.home.edit}
             </Menu.Item>
             <Menu.Item
               value="delete"
@@ -216,7 +219,7 @@ function EntryMoreMenu(props: {
               disabled={isTimerBusy(props.timesheet.timer)}
             >
               <DeleteIcon />
-              Delete
+              {copy.home.delete}
             </Menu.Item>
           </Menu.Content>
         </Menu.Positioner>
@@ -230,6 +233,7 @@ function EntryDeleteDialog(props: {
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const copy = useCopy();
   const open = overlayIsOpen(props.overlay);
   const deleting = props.overlay.kind === "deleting";
   const title = overlayTitle(props.overlay);
@@ -252,7 +256,7 @@ function EntryDeleteDialog(props: {
         <Dialog.Positioner px="4">
           <Dialog.Content mx="auto">
             <Dialog.Header>
-              <Dialog.Title>Delete this time entry?</Dialog.Title>
+              <Dialog.Title>{copy.home.deleteTitle}</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
               <Dialog.Description>{title}</Dialog.Description>
@@ -264,7 +268,7 @@ function EntryDeleteDialog(props: {
                 onClick={props.onCancel}
                 disabled={deleting}
               >
-                Cancel
+                {copy.home.cancel}
               </Button>
               <Button
                 type="button"
@@ -274,7 +278,7 @@ function EntryDeleteDialog(props: {
                 loading={deleting}
                 disabled={deleting}
               >
-                Delete entry
+                {copy.home.deleteConfirm}
               </Button>
             </Dialog.Footer>
           </Dialog.Content>
@@ -293,6 +297,7 @@ function EntryRow(props: {
   onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
 }) {
+  const copy = useCopy();
   const shown = displayedMinutes({
     logged: props.entry.logged,
     entryId: props.entry.id,
@@ -346,7 +351,7 @@ function EntryRow(props: {
         </Flex>
         <Text asChild color="fg.muted" textStyle="sm" alignSelf="flex-end">
           <time dateTime={props.entry.day}>
-            {formatCalendarDayLabel(props.entry.day)}
+            {copy.dayLabel(props.entry.day)}
           </time>
         </Text>
       </Flex>
@@ -354,12 +359,16 @@ function EntryRow(props: {
   );
 }
 
-function timerActionLabel(kind: TimerControl["kind"], title: string): string {
+function timerActionLabel(
+  kind: TimerControl["kind"],
+  title: string,
+  copy: Copy,
+): string {
   switch (kind) {
     case "play":
-      return `Start timer for ${title}`;
+      return copy.home.startTimer(title);
     case "stop":
-      return `Stop timer for ${title}`;
+      return copy.home.stopTimer(title);
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -394,8 +403,9 @@ function TimerButton(props: {
   onPlay: () => void;
   onPause: () => void;
 }): ReactElement {
+  const copy = useCopy();
   const { control } = props;
-  const label = timerActionLabel(control.kind, props.title);
+  const label = timerActionLabel(control.kind, props.title, copy);
   switch (control.mode) {
     case "pending":
       return (
@@ -469,6 +479,7 @@ function ReadyList(props: {
   onEdit: (entry: TimeEntry) => void;
   onDelete: (entry: TimeEntry) => void;
 }) {
+  const copy = useCopy();
   const {
     rows,
     page,
@@ -508,7 +519,7 @@ function ReadyList(props: {
       overflowY="auto"
       tabIndex={0}
       role="list"
-      aria-label={`Time entries for ${formatCalendarDayLabel(timesheet.day)}`}
+      aria-label={copy.home.regionFor(timesheet.day)}
       css={{ scrollBehavior: "auto" }}
     >
       <Box
@@ -558,6 +569,7 @@ function LoadMoreFooter(props: {
   page: PageCursor;
   onLoadMore: () => void;
 }): ReactElement | null {
+  const copy = useCopy();
   const control = loadMoreControl(props.page);
   if (!control.visible) {
     return null;
@@ -567,20 +579,20 @@ function LoadMoreFooter(props: {
       return (
         <Text
           role="status"
-          aria-label="Loading more entries"
+          aria-label={copy.home.loadingMore}
           aria-live="polite"
         >
-          Loading more entries
+          {copy.home.loadingMore}
         </Text>
       );
     case "retry":
       return (
         <Stack gap="2">
           <Text color="fg.error" role="alert">
-            {control.error}
+            {copy.failure[control.error]}
           </Text>
           <Button type="button" variant="outline" onClick={props.onLoadMore}>
-            Retry
+            {copy.home.retry}
           </Button>
         </Stack>
       );
@@ -601,6 +613,7 @@ export function DayEntryList(props: {
   onRemove: (entryId: TimeEntryId) => Promise<void>;
   onEdit: (entry: TimeEntry) => void;
 }) {
+  const copy = useCopy();
   const { timesheet } = props;
   const [overlay, setOverlay] = useState<ListOverlay>({ kind: "closed" });
   const regionRef = useRef<HTMLDivElement>(null);
@@ -643,7 +656,7 @@ export function DayEntryList(props: {
     case "failed":
       body = (
         <Text color="fg.error" role="alert">
-          {timesheet.entries.error.message}
+          {copy.failure[timesheet.entries.error]}
         </Text>
       );
       break;
@@ -665,11 +678,10 @@ export function DayEntryList(props: {
               height={48}
             />
             <Heading as="h2" size="md">
-              There's no tracked time for{" "}
-              {formatCalendarDayLabel(timesheet.day)}
+              {copy.home.emptyHeading(timesheet.day)}
             </Heading>
             {timesheet.entries.copy.kind === "unavailable" ? (
-              <Text>Add a time entry to start this day.</Text>
+              <Text>{copy.home.emptyHint}</Text>
             ) : null}
             {copyButtonVisible(timesheet) ? (
               <Button
@@ -687,12 +699,12 @@ export function DayEntryList(props: {
                   timesheet.entries.copy.kind === "checking"
                 }
               >
-                Copy tasks from previous day
+                {copy.home.copyPreviousDay}
               </Button>
             ) : null}
             {timesheet.entries.copy.kind === "failed" ? (
               <Text color="fg.error" role="alert">
-                {timesheet.entries.copy.error.message}
+                {copy.failure[timesheet.entries.copy.error]}
               </Text>
             ) : null}
           </Stack>
@@ -703,7 +715,7 @@ export function DayEntryList(props: {
       body = (
         <Stack gap="3" flex="1" minH="0">
           <Heading as="h2" size="md" flexShrink="0">
-            Time entries for {formatCalendarDayLabel(timesheet.day)}
+            {copy.home.regionFor(timesheet.day)}
           </Heading>
           <ReadyList
             rows={timesheet.entries.rows}
@@ -735,7 +747,7 @@ export function DayEntryList(props: {
       tabIndex={-1}
       outline="none"
       role="region"
-      aria-label="Time entries"
+      aria-label={copy.home.region}
       flex="1"
       minH="0"
       display="flex"
@@ -743,7 +755,7 @@ export function DayEntryList(props: {
       overflow="hidden"
     >
       <Box className="sr-only" aria-live="polite" aria-atomic="true">
-        {listAnnouncement(timesheet)}
+        {listAnnouncement(timesheet, copy)}
       </Box>
       {body}
       <EntryDeleteDialog

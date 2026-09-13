@@ -26,7 +26,7 @@ export function parseStoredCredentials(
 
 export function loadCredentials(): Credentials | undefined {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
     if (raw === null) {
       return undefined;
     }
@@ -43,7 +43,7 @@ export function saveCredentials(credentials: Credentials): void {
       accessToken: credentials.accessToken,
     };
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
     return;
   }
@@ -51,7 +51,7 @@ export function saveCredentials(credentials: Credentials): void {
 
 export function clearCredentials(): void {
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.sessionStorage.removeItem(STORAGE_KEY);
   } catch {
     return;
   }

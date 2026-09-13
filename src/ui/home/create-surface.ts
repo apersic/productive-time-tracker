@@ -1,3 +1,5 @@
+import type { TimesheetError } from "../../features/timesheet";
+
 export const HOME_CREATE_SPLIT = "lg" as const;
 
 export const HOME_CREATE_PORTAL_ID = "home-create-portal";
@@ -18,15 +20,14 @@ export type CreateRequest = { kind: "closed" } | { kind: "open" };
 export type CreateStatus =
   | { kind: "editing" }
   | { kind: "saving" }
-  | { kind: "failed"; message: string };
+  | { kind: "failed"; error: TimesheetError };
 
 export type CreateSurface =
   | { kind: "inline"; status: CreateStatus }
   | { kind: "trigger" }
   | { kind: "modal"; status: CreateStatus };
 
-export type CreateResult =
-  { ok: true } | { ok: false; error: { message: string } };
+export type CreateResult = { ok: true } | { ok: false; error: TimesheetError };
 
 export function createSurface(args: {
   layout: CreateLayout;
@@ -56,7 +57,7 @@ export function createSurface(args: {
 
 export function entryFormStatus(status: CreateStatus): {
   submitting: boolean;
-  error: string | undefined;
+  error: TimesheetError | undefined;
 } {
   switch (status.kind) {
     case "editing":
@@ -64,7 +65,7 @@ export function entryFormStatus(status: CreateStatus): {
     case "saving":
       return { submitting: true, error: undefined };
     case "failed":
-      return { submitting: false, error: status.message };
+      return { submitting: false, error: status.error };
     default: {
       const _exhaustive: never = status;
       return _exhaustive;

@@ -52,7 +52,7 @@ QUnit.module("credentials storage io", (hooks) => {
     setItemImpl = (key, value) => {
       store.set(key, value);
     };
-    const localStorage = {
+    const sessionStorage = {
       getItem(key: string) {
         return store.get(key) ?? null;
       },
@@ -64,7 +64,7 @@ QUnit.module("credentials storage io", (hooks) => {
       },
     };
     Object.defineProperty(globalThis, "window", {
-      value: { localStorage },
+      value: { sessionStorage },
       configurable: true,
       writable: true,
     });
@@ -178,17 +178,17 @@ QUnit.test("keeps credentials on network and invalid failures", (assert) => {
   assert.deepEqual(
     restoreOutcome({
       ok: false,
-      error: { kind: "network", message: "Could not reach Productive." },
+      error: "unreachable",
     }),
     {
       kind: "unavailable",
-      error: { kind: "network", message: "Could not reach Productive." },
+      error: "unreachable",
     },
   );
   assert.deepEqual(
     restoreOutcome({
       ok: false,
-      error: { kind: "invalid", message: "Productive rejected the request." },
+      error: "requestRejected",
     }).kind,
     "unavailable",
   );
@@ -198,10 +198,7 @@ QUnit.test("forgets credentials only when unauthorized", (assert) => {
   assert.deepEqual(
     restoreOutcome({
       ok: false,
-      error: {
-        kind: "unauthorized",
-        message: "Invalid token or organization ID.",
-      },
+      error: "badCredentials",
     }),
     { kind: "forget" },
   );
@@ -237,10 +234,7 @@ QUnit.test("rejects more than one user or person", (assert) => {
   });
   assert.deepEqual(manyUsers, {
     ok: false,
-    error: {
-      kind: "invalid",
-      message: "Productive returned more than one user.",
-    },
+    error: "manyUsers",
   });
 
   const organizationId = parseOrganizationId("61648");
@@ -261,10 +255,7 @@ QUnit.test("rejects more than one user or person", (assert) => {
   });
   assert.deepEqual(manyPeople, {
     ok: false,
-    error: {
-      kind: "invalid",
-      message: "Productive returned more than one person.",
-    },
+    error: "manyPeople",
   });
 });
 

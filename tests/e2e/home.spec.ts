@@ -26,7 +26,10 @@ import {
 } from "./productive-mock";
 
 async function storedCredentials(page: Page) {
-  return page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY);
+  return page.evaluate(
+    (key) => window.sessionStorage.getItem(key),
+    STORAGE_KEY,
+  );
 }
 
 function sameMonthNeighbor(day: CalendarDay): CalendarDay {
@@ -114,6 +117,33 @@ test("creating an entry posts the form and shows the row", async ({ page }) => {
   ).toBeVisible();
   await expect(page.locator('input[name="duration"]')).toHaveValue("");
   await expect(editor).toHaveClass(/is-empty/);
+});
+
+test("creating an entry with empty duration posts time 0", async ({ page }) => {
+  let posted: unknown;
+  await mockProductiveIdentity(page);
+  await mockServices(page);
+  await mockTimers(page);
+  await page.route("**/api/v2/time_entries**", async (route) => {
+    const request = route.request();
+    if (request.method() === "POST") {
+      posted = request.postDataJSON();
+      await route.fulfill({
+        ...jsonApiHeaders(),
+        status: 201,
+        body: JSON.stringify(createdEntryResponse(posted)),
+      });
+      return;
+    }
+    await route.fulfill({
+      ...jsonApiHeaders(),
+      body: JSON.stringify(jsonApiEmptyList()),
+    });
+  });
+  await openHome(page);
+  await page.getByRole("button", { name: "Add entry" }).click();
+  expect(jsonApiAttribute(posted, "time")).toBe(0);
+  await expect(page.getByText("Time entry added")).toBeVisible();
 });
 
 test("changing the create Date posts that day", async ({ page }) => {

@@ -51,7 +51,7 @@ export async function browserCalendarDayLabel(page: Page, day: string) {
     const year = Number(iso.slice(0, 4));
     const month = Number(iso.slice(5, 7));
     const date = Number(iso.slice(8, 10));
-    return new Date(year, month - 1, date).toLocaleDateString(undefined, {
+    return new Date(year, month - 1, date).toLocaleDateString("en", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -411,7 +411,7 @@ export async function mockHomeApis(page: Page) {
 export async function seedStoredCredentials(page: Page) {
   await page.addInitScript(
     ({ key }) => {
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         key,
         JSON.stringify({
           organizationId: "61648",

@@ -7,7 +7,7 @@ import {
   type LogoutArgs,
   type Person,
 } from "../lib/auth";
-import { pageHeading } from "../lib/document";
+import { useCopy } from "../lib/copy";
 import { todayLocal } from "../lib/time/calendar-day.ts";
 import { useDayTimesheet } from "../features/timesheet/hooks";
 import {
@@ -71,11 +71,12 @@ function HomeShell(props: { children: ReactNode }): ReactElement {
 }
 
 function HomeMain(props: { children: ReactNode }): ReactElement {
+  const copy = useCopy();
   return (
     <Stack
       as="main"
       id="main"
-      aria-label={pageHeading("home")}
+      aria-label={copy.page.home}
       gap="6"
       w="full"
       maxW={HOME_CONTENT_MAX_W}
@@ -132,6 +133,7 @@ function AuthenticatedHome(props: {
   person: Person;
   logout: (args?: LogoutArgs) => void;
 }) {
+  const copy = useCopy();
   const location = useLocation();
   const navigate = useNavigate();
   const initialDay = parseHomeReturn(location.state) ?? todayLocal();
@@ -159,7 +161,7 @@ function AuthenticatedHome(props: {
       <HomeMain>
         {timesheet.timer.kind === "failed" ? (
           <Text color="fg.error" role="alert" flexShrink="0">
-            {timesheet.timer.error.message}
+            {copy.failure[timesheet.timer.error]}
           </Text>
         ) : null}
         <Grid
@@ -169,7 +171,7 @@ function AuthenticatedHome(props: {
           flex="1"
           minH="0"
         >
-          <Box hideBelow={HOME_CREATE_SPLIT} minH="0" overflow="hidden">
+          <Box hideBelow={HOME_CREATE_SPLIT} minH="0" overflowY="auto">
             <CreateEntrySurface
               picker={picker}
               blocked={timesheet.entries.status === "loading"}
