@@ -1,8 +1,9 @@
+import type { Copy } from "../copy/en.ts";
 import {
-  formatCalendarDayLabel,
-  type CalendarDay,
-} from "../time/calendar-day.ts";
-import type { TimesheetError } from "../../features/timesheet/timesheet-model.ts";
+  timesheetFailureKind,
+  type TimesheetError,
+} from "../../features/timesheet/timesheet-model.ts";
+import type { CalendarDay } from "../time/calendar-day.ts";
 
 export type Write =
   | { op: "createEntry"; result: WriteResult }
@@ -24,18 +25,35 @@ export type Notice =
   | { kind: "entryCreated" }
   | { kind: "dayCopied"; from: CalendarDay; created: number }
   | { kind: "dayCopiedPartial"; from: CalendarDay; created: number }
-  | { kind: "timerFailed"; message: string }
-  | { kind: "recoverTimerFailed"; message: string }
+  | { kind: "timerFailed"; error: TimesheetError }
+  | { kind: "recoverTimerFailed"; error: TimesheetError }
   | { kind: "entryDeleted" }
-  | { kind: "entryDeleteFailed"; message: string }
+  | { kind: "entryDeleteFailed"; error: TimesheetError }
   | { kind: "entryUpdated" }
-  | { kind: "entryUpdateFailed"; message: string }
-  | { kind: "copyDayFailed"; message: string }
+  | { kind: "entryUpdateFailed"; error: TimesheetError }
+  | { kind: "copyDayFailed"; error: TimesheetError }
   | { kind: "sessionExpired" };
 
 export type NoticeCopy =
   | { level: "title"; title: string }
   | { level: "detail"; title: string; description: string };
+
+function failedNotice<
+  K extends
+    | "timerFailed"
+    | "recoverTimerFailed"
+    | "entryDeleteFailed"
+    | "entryUpdateFailed"
+    | "copyDayFailed",
+>(
+  kind: K,
+  error: TimesheetError,
+): { kind: K; error: TimesheetError } | undefined {
+  if (timesheetFailureKind(error) === "unauthorized") {
+    return undefined;
+  }
+  return { kind, error };
+}
 
 export function noticeFromWrite(write: Write): Notice | undefined {
   switch (write.op) {
@@ -47,13 +65,7 @@ export function noticeFromWrite(write: Write): Notice | undefined {
     }
     case "copyDay": {
       if (!write.result.ok) {
-        if (write.result.error.kind === "unauthorized") {
-          return undefined;
-        }
-        return {
-          kind: "copyDayFailed",
-          message: write.result.error.message,
-        };
+        return failedNotice("copyDayFailed", write.result.error);
       }
       if (write.result.created <= 0) {
         return undefined;
@@ -81,49 +93,25 @@ export function noticeFromWrite(write: Write): Notice | undefined {
       if (write.result.ok) {
         return undefined;
       }
-      if (write.result.error.kind === "unauthorized") {
-        return undefined;
-      }
-      return {
-        kind: "timerFailed",
-        message: write.result.error.message,
-      };
+      return failedNotice("timerFailed", write.result.error);
     }
     case "recoverTimer": {
       if (write.result.ok) {
         return undefined;
       }
-      if (write.result.error.kind === "unauthorized") {
-        return undefined;
-      }
-      return {
-        kind: "recoverTimerFailed",
-        message: write.result.error.message,
-      };
+      return failedNotice("recoverTimerFailed", write.result.error);
     }
     case "deleteEntry": {
       if (write.result.ok) {
         return { kind: "entryDeleted" };
       }
-      if (write.result.error.kind === "unauthorized") {
-        return undefined;
-      }
-      return {
-        kind: "entryDeleteFailed",
-        message: write.result.error.message,
-      };
+      return failedNotice("entryDeleteFailed", write.result.error);
     }
     case "updateEntry": {
       if (write.result.ok) {
         return { kind: "entryUpdated" };
       }
-      if (write.result.error.kind === "unauthorized") {
-        return undefined;
-      }
-      return {
-        kind: "entryUpdateFailed",
-        message: write.result.error.message,
-      };
+      return failedNotice("entryUpdateFailed", write.result.error);
     }
     case "sessionExpired":
       return { kind: "sessionExpired" };
@@ -134,59 +122,59 @@ export function noticeFromWrite(write: Write): Notice | undefined {
   }
 }
 
-export function copyForNotice(notice: Notice): NoticeCopy {
+export function copyForNotice(notice: Notice, copy: Copy): NoticeCopy {
   switch (notice.kind) {
     case "entryCreated":
-      return { level: "title", title: "Time entry added" };
+      return { level: "title", title: copy.notice.entryCreated };
     case "dayCopied":
       return {
         level: "title",
-        title: `Copied entries from ${formatCalendarDayLabel(notice.from)}`,
+        title: copy.notice.dayCopied(notice.from),
       };
     case "dayCopiedPartial":
       return {
         level: "detail",
-        title: `Copied some entries from ${formatCalendarDayLabel(notice.from)}`,
-        description: "Productive rejected the rest.",
+        title: copy.notice.dayCopiedPartial(notice.from),
+        description: copy.notice.dayCopiedPartialDetail,
       };
     case "timerFailed":
       return {
         level: "detail",
-        title: "Couldn't update the timer",
-        description: notice.message,
+        title: copy.notice.timerFailed,
+        description: copy.failure[notice.error],
       };
     case "recoverTimerFailed":
       return {
         level: "detail",
-        title: "Couldn't refresh the timer",
-        description: notice.message,
+        title: copy.notice.recoverTimerFailed,
+        description: copy.failure[notice.error],
       };
     case "entryDeleted":
-      return { level: "title", title: "Time entry deleted" };
+      return { level: "title", title: copy.notice.entryDeleted };
     case "entryDeleteFailed":
       return {
         level: "detail",
-        title: "Couldn't delete the time entry",
-        description: notice.message,
+        title: copy.notice.entryDeleteFailed,
+        description: copy.failure[notice.error],
       };
     case "entryUpdated":
-      return { level: "title", title: "Time entry updated" };
+      return { level: "title", title: copy.notice.entryUpdated };
     case "entryUpdateFailed":
       return {
         level: "detail",
-        title: "Couldn't update the time entry",
-        description: notice.message,
+        title: copy.notice.entryUpdateFailed,
+        description: copy.failure[notice.error],
       };
     case "copyDayFailed":
       return {
         level: "detail",
-        title: "Couldn't copy the previous day",
-        description: notice.message,
+        title: copy.notice.copyDayFailed,
+        description: copy.failure[notice.error],
       };
     case "sessionExpired":
       return {
         level: "title",
-        title: "Your session expired. Log in again.",
+        title: copy.notice.sessionExpired,
       };
     default: {
       const _exhaustive: never = notice;

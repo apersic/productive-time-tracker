@@ -15,6 +15,7 @@ import {
   type ServicePicker,
 } from "../../features/timesheet";
 import { usePrefersReducedMotion } from "../../lib/hooks";
+import { useCopy } from "../../lib/copy";
 import { PlusIcon, XIcon } from "../../lib/icons";
 import { EntryForm, type EntryDayControl } from "../shared";
 import {
@@ -44,6 +45,7 @@ export function CreateEntrySurface(props: {
   day: EntryDayControl;
   onCreate: (draft: EntryDraft) => Promise<CreateResult>;
 }) {
+  const copy = useCopy();
   const layout = useCreateLayout();
   const [request, setRequest] = useState<CreateRequest>({ kind: "closed" });
   const [status, setStatus] = useState<CreateStatus>({ kind: "editing" });
@@ -69,7 +71,7 @@ export function CreateEntrySurface(props: {
     setStatus({ kind: "saving" });
     const result = await props.onCreate(draft);
     if (!result.ok) {
-      setStatus({ kind: "failed", message: result.error.message });
+      setStatus({ kind: "failed", error: result.error });
       return false;
     }
     setStatus({ kind: "editing" });
@@ -95,7 +97,7 @@ export function CreateEntrySurface(props: {
           blocked={props.blocked}
           day={props.day}
           onSubmit={submit}
-          heading="New time entry"
+          heading={copy.home.newEntry}
         />
       );
     case "trigger": {
@@ -128,6 +130,7 @@ function CreateEntryForm(props: {
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
   heading?: string;
 }) {
+  const copy = useCopy();
   const { submitting, error } = entryFormStatus(props.status);
   return (
     <Stack gap="3">
@@ -139,7 +142,7 @@ function CreateEntryForm(props: {
       <EntryForm
         initial={blankEntryFields()}
         day={props.day}
-        submitLabel="Add entry"
+        submitLabel={copy.form.addEntry}
         picker={props.picker}
         submitting={submitting}
         blocked={props.blocked}
@@ -151,15 +154,16 @@ function CreateEntryForm(props: {
 }
 
 function CreateEntryFab(props: { blocked: boolean; onOpen: () => void }) {
+  const copy = useCopy();
   return (
     <Box
       as="nav"
-      aria-label="Create time entry"
+      aria-label={copy.home.createNav}
       className="fixed right-4 bottom-4 z-50"
     >
       <Button
         type="button"
-        aria-label="New time entry"
+        aria-label={copy.home.newEntry}
         onClick={props.onOpen}
         disabled={props.blocked}
         colorPalette="blue"
@@ -182,6 +186,7 @@ function CreateEntryDialog(props: {
   onClose: () => void;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
 }) {
+  const copy = useCopy();
   const canDismiss = dismissable(props.status);
   const reduceMotion = usePrefersReducedMotion();
   return (
@@ -210,13 +215,13 @@ function CreateEntryDialog(props: {
               justifyContent="space-between"
               alignItems="center"
             >
-              <Dialog.Title>New time entry</Dialog.Title>
+              <Dialog.Title>{copy.home.newEntry}</Dialog.Title>
               <Dialog.CloseTrigger asChild>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  aria-label="Close"
+                  aria-label={copy.form.close}
                   disabled={!canDismiss}
                 >
                   <XIcon />

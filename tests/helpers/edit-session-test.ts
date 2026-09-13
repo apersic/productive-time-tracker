@@ -109,7 +109,7 @@ QUnit.test("other page kinds are not moved", (assert) => {
     dayMoved({
       kind: "failed",
       entryId: entryId("entry-1"),
-      error: { kind: "rejected", message: "nope" },
+      error: "entryGone",
     }),
     false,
   );
@@ -167,7 +167,7 @@ QUnit.test("other page kinds await a day", (assert) => {
     pickerContext({
       kind: "failed",
       entryId: entryId("entry-1"),
-      error: { kind: "rejected", message: "nope" },
+      error: "entryGone",
     }),
     { kind: "awaitingDay" },
   );
@@ -215,7 +215,7 @@ QUnit.test("identity outside ready", (assert) => {
     {
       kind: "failed",
       entryId: entryId("entry-1"),
-      error: { kind: "rejected", message: "nope" },
+      error: "entryGone",
     },
     {
       kind: "saving",
@@ -261,7 +261,7 @@ QUnit.test("identity outside ready", (assert) => {
     {
       kind: "failed",
       entryId: entryId("entry-1"),
-      error: { kind: "rejected", message: "nope" },
+      error: "entryGone",
     },
     {
       kind: "saving",

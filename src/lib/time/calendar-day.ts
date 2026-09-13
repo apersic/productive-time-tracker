@@ -43,8 +43,11 @@ export function nextCalendarDay(day: CalendarDay): CalendarDay {
   return formatLocalYmd(date);
 }
 
-export function formatCalendarDayLabel(day: CalendarDay): string {
-  return localDateFromCalendarDay(day).toLocaleDateString(undefined, {
+export function formatCalendarDayLabel(
+  day: CalendarDay,
+  locale: string,
+): string {
+  return localDateFromCalendarDay(day).toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",

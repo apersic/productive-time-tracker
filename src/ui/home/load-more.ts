@@ -1,9 +1,9 @@
-import type { PageCursor } from "../../features/timesheet";
+import type { PageCursor, TimesheetError } from "../../features/timesheet";
 
 export type LoadMoreControl =
   | { visible: false }
   | { visible: true; kind: "status" }
-  | { visible: true; kind: "retry"; error: string };
+  | { visible: true; kind: "retry"; error: TimesheetError };
 
 export function loadMoreControl(page: PageCursor): LoadMoreControl {
   switch (page.kind) {
@@ -13,7 +13,7 @@ export function loadMoreControl(page: PageCursor): LoadMoreControl {
     case "loadingMore":
       return { visible: true, kind: "status" };
     case "moreFailed":
-      return { visible: true, kind: "retry", error: page.error.message };
+      return { visible: true, kind: "retry", error: page.error };
     default: {
       const _exhaustive: never = page;
       return _exhaustive;

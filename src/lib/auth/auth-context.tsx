@@ -70,10 +70,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         }
         setSession({
           kind: "unavailable",
-          error: {
-            kind: "network",
-            message: "Could not reach Productive.",
-          },
+          error: "unreachable",
         });
       });
     return () => {
@@ -91,10 +88,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         } catch {
           return {
             ok: false,
-            error: {
-              kind: "network",
-              message: "Could not reach Productive.",
-            },
+            error: "unreachable",
           };
         }
         if (!result.ok) {

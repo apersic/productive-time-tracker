@@ -258,10 +258,7 @@ function parseWrittenTimeEntry(
   if (!unique.ok) {
     return {
       ok: false,
-      error: {
-        kind: "invalid",
-        message: "Productive returned a bad time entry.",
-      },
+      error: "badTimeEntry",
     };
   }
   const included = parseJsonApiIncluded(json);
@@ -276,10 +273,7 @@ function parseWrittenTimeEntry(
   if (!parsed) {
     return {
       ok: false,
-      error: {
-        kind: "invalid",
-        message: "Productive returned a bad time entry.",
-      },
+      error: "badTimeEntry",
     };
   }
   return { ok: true, entry: parsed.entry };
@@ -386,19 +380,13 @@ export async function updateTimeEntry(args: {
     if (result.status === 403) {
       return {
         ok: false,
-        error: {
-          kind: "rejected",
-          message: "This time entry can't be updated.",
-        },
+        error: "entryNotUpdatable",
       };
     }
     if (result.status === 404) {
       return {
         ok: false,
-        error: {
-          kind: "rejected",
-          message: "This time entry no longer exists.",
-        },
+        error: "entryGone",
       };
     }
     return result;
@@ -424,10 +412,7 @@ export async function deleteTimeEntry(args: {
   if (result.status === 403) {
     return {
       ok: false,
-      error: {
-        kind: "rejected",
-        message: "This time entry can't be deleted.",
-      },
+      error: "entryNotDeletable",
     };
   }
   return result;

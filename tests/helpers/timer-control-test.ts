@@ -48,7 +48,7 @@ QUnit.test("failed is play ready on every row", (assert) => {
   const timer: TimerSlot = {
     kind: "failed",
     entryId: THIS,
-    error: { kind: "network", message: "nope" },
+    error: "unreachable",
   };
   assert.deepEqual(timerControl({ entryId: THIS, timer }), PLAY_READY);
   assert.deepEqual(timerControl({ entryId: OTHER, timer }), PLAY_READY);

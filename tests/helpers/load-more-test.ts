@@ -2,7 +2,7 @@ import QUnit from "qunit";
 import { loadMoreControl } from "../../src/ui/home/load-more";
 
 const NEXT = "https://api.productive.io/api/v2/time_entries?page=2";
-const ERROR = { kind: "network" as const, message: "nope" };
+const ERROR = "unreachable";
 
 QUnit.module("loadMoreControl");
 
@@ -32,7 +32,7 @@ QUnit.test("moreFailed shows Retry with the error", (assert) => {
     {
       visible: true,
       kind: "retry",
-      error: "nope",
+      error: ERROR,
     },
   );
 });

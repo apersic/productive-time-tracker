@@ -1,4 +1,5 @@
 import { Toaster, Toast, createToaster, Portal, Stack } from "@chakra-ui/react";
+import { useCopy } from "../copy";
 import {
   copyForNotice,
   noticeFromWrite,
@@ -16,6 +17,8 @@ const toaster = createToaster({
     bottom: "var(--notice-offset-bottom, 1rem)",
   },
 });
+
+const notices = new Map<string, Notice>();
 
 function typeForNotice(notice: Notice): "success" | "warning" | "error" {
   switch (notice.kind) {
@@ -90,18 +93,17 @@ export function announce(write: Write): void {
   if (notice === undefined) {
     return;
   }
-  const copy = copyForNotice(notice);
-  const id = toastIdForNotice(notice);
+  const id = toastIdForNotice(notice) ?? crypto.randomUUID();
+  notices.set(id, notice);
   toaster.create({
-    title: copy.title,
-    description: copy.level === "detail" ? copy.description : undefined,
+    id,
     type: typeForNotice(notice),
     duration: durationForNotice(notice),
-    ...(id ? { id } : {}),
   });
 }
 
 export function NoticeHost() {
+  const catalog = useCopy();
   return (
     <Portal>
       <Toaster
@@ -115,18 +117,25 @@ export function NoticeHost() {
           },
         }}
       >
-        {(toast) => (
-          <Toast.Root w="fit-content" maxW="100%">
-            <Toast.Indicator />
-            <Stack gap="1" maxW="100%">
-              <Toast.Title>{toast.title}</Toast.Title>
-              {toast.description ? (
-                <Toast.Description>{toast.description}</Toast.Description>
-              ) : null}
-            </Stack>
-            <Toast.CloseTrigger />
-          </Toast.Root>
-        )}
+        {(toast) => {
+          const notice = notices.get(String(toast.id));
+          if (notice === undefined) {
+            return null;
+          }
+          const copy = copyForNotice(notice, catalog);
+          return (
+            <Toast.Root w="fit-content" maxW="100%" aria-label={copy.title}>
+              <Toast.Indicator />
+              <Stack gap="1" maxW="100%">
+                <Toast.Title>{copy.title}</Toast.Title>
+                {copy.level === "detail" ? (
+                  <Toast.Description>{copy.description}</Toast.Description>
+                ) : null}
+              </Stack>
+              <Toast.CloseTrigger />
+            </Toast.Root>
+          );
+        }}
       </Toaster>
     </Portal>
   );

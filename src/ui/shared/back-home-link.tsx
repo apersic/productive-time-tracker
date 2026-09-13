@@ -2,10 +2,12 @@ import { Button, Dialog, Link, Portal } from "@chakra-ui/react";
 import { useState, type MouseEvent } from "react";
 import { useNavigate } from "react-router";
 import { homeReturnState } from "../../features/edit";
+import { useCopy } from "../../lib/copy";
 import { ArrowLeftIcon } from "../../lib/icons";
 import type { CalendarDay } from "../../lib/time/calendar-day.ts";
 
 export function BackHomeLink(props: { day?: CalendarDay; dirty?: boolean }) {
+  const copy = useCopy();
   const navigate = useNavigate();
   const [ask, setAsk] = useState(false);
   const homeState = props.day ? homeReturnState(props.day) : undefined;
@@ -44,7 +46,7 @@ export function BackHomeLink(props: { day?: CalendarDay; dirty?: boolean }) {
         onClick={onBackClick}
       >
         <ArrowLeftIcon />
-        Back to home
+        {copy.edit.backHome}
       </Link>
       <Dialog.Root
         role="alertdialog"
@@ -62,12 +64,10 @@ export function BackHomeLink(props: { day?: CalendarDay; dirty?: boolean }) {
           <Dialog.Positioner px="4">
             <Dialog.Content mx="auto">
               <Dialog.Header>
-                <Dialog.Title>Discard unsaved changes?</Dialog.Title>
+                <Dialog.Title>{copy.edit.discardTitle}</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Dialog.Description>
-                  Your edits will be lost if you leave this page.
-                </Dialog.Description>
+                <Dialog.Description>{copy.edit.discardBody}</Dialog.Description>
               </Dialog.Body>
               <Dialog.Footer>
                 <Button
@@ -77,7 +77,7 @@ export function BackHomeLink(props: { day?: CalendarDay; dirty?: boolean }) {
                     setAsk(false);
                   }}
                 >
-                  Keep editing
+                  {copy.edit.keepEditing}
                 </Button>
                 <Button
                   type="button"
@@ -88,7 +88,7 @@ export function BackHomeLink(props: { day?: CalendarDay; dirty?: boolean }) {
                     goHome();
                   }}
                 >
-                  Discard
+                  {copy.edit.discard}
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>
