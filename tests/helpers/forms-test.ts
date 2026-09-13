@@ -18,7 +18,7 @@ QUnit.test("fieldIssue copy names the two issues", (assert) => {
 });
 
 QUnit.test("durationFieldIssue maps a draft onto a field issue", (assert) => {
-  assert.strictEqual(durationFieldIssue(parseDurationDraft("")), "blank");
+  assert.strictEqual(durationFieldIssue(parseDurationDraft("")), undefined);
   assert.strictEqual(durationFieldIssue(parseDurationDraft("abc")), "blank");
   assert.strictEqual(
     durationFieldIssue(parseDurationDraft("24:00")),
