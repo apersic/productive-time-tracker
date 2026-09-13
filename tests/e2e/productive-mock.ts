@@ -411,7 +411,7 @@ export async function mockHomeApis(page: Page) {
 export async function seedStoredCredentials(page: Page) {
   await page.addInitScript(
     ({ key }) => {
-      window.localStorage.setItem(
+      window.sessionStorage.setItem(
         key,
         JSON.stringify({
           organizationId: "61648",
