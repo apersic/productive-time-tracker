@@ -12,8 +12,10 @@ export function CalendarDayPicker(props: {
   disabled?: boolean;
   label: string;
   labelHidden?: boolean;
+  width?: "auto" | "full";
 }) {
   const selected = parseDate(props.value);
+  const width = props.width ?? "auto";
 
   return (
     <DatePicker.Root
@@ -21,7 +23,7 @@ export function CalendarDayPicker(props: {
       colorPalette="blue"
       variant="outline"
       openOnClick
-      w="auto"
+      w={width}
       disabled={props.disabled}
       format={(date) => {
         const day = parseCalendarDay(date.toString());
@@ -45,13 +47,13 @@ export function CalendarDayPicker(props: {
       <DatePicker.Label className={props.labelHidden ? "sr-only" : undefined}>
         {props.label}
       </DatePicker.Label>
-      <DatePicker.Control bg="bg" w="auto">
+      <DatePicker.Control bg="bg" w={width}>
         <DatePicker.Input
           autoComplete="off"
           bg="bg"
           readOnly
           cursor="pointer"
-          w="auto"
+          w={width}
         />
         <DatePicker.IndicatorGroup>
           <DatePicker.Trigger type="button" aria-label="Open calendar">
