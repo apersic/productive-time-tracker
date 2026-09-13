@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Tailwind preflight tints ::placeholder to 50% currentcolor. */
+input::placeholder,
+textarea::placeholder {
+  color: var(--chakra-colors-fg-subtle);
+  opacity: 1;
+}
+
 html,
 body {
   scroll-behavior: smooth;

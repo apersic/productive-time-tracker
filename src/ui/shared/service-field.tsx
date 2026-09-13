@@ -136,7 +136,7 @@ export function ServiceField(props: {
             picker.open();
           }}
         >
-          <Text truncate color={selectedName ? undefined : "fg.muted"}>
+          <Text truncate color={selectedName ? undefined : "fg.subtle"}>
             {selectedName && selectedName.length > 0
               ? selectedName
               : "Select a service"}
