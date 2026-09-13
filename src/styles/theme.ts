@@ -45,8 +45,13 @@ export const system = createSystem(defaultConfig, {
       colorPalette: "gray",
       scrollPaddingTop: "4.5rem",
     },
+    "*::placeholder, *[data-placeholder]": {
+      color: "fg.subtle",
+      opacity: 1,
+    },
     ".note-editor .ProseMirror.is-empty::before": {
       color: "fg.subtle",
+      opacity: 1,
     },
   },
 });
