@@ -614,7 +614,7 @@ QUnit.test("moreRequested retries from moreFailed", (assert) => {
       page: {
         kind: "moreFailed",
         next: "/time_entries?page=2",
-        error: { kind: "network", message: "Could not reach Productive." },
+        error: "unreachable",
       },
     },
     timer: { kind: "idle" },
@@ -856,10 +856,7 @@ QUnit.module("deleteTimeEntry", (hooks) => {
     });
     assert.deepEqual(result, {
       ok: false,
-      error: {
-        kind: "rejected",
-        message: "This time entry can't be deleted.",
-      },
+      error: "entryNotDeletable",
     });
   });
 });

@@ -1,6 +1,7 @@
 import QUnit from "qunit";
+import { copyFor } from "../../src/lib/copy";
 import { copyForNotice, noticeFromWrite } from "../../src/lib/notice/notice";
-import { formatCalendarDayLabel, parseCalendarDay } from "../../src/lib/time";
+import { parseCalendarDay } from "../../src/lib/time";
 import type { TimesheetError } from "../../src/features/timesheet";
 
 function day(value: string) {
@@ -11,11 +12,13 @@ function day(value: string) {
   return parsed;
 }
 
-function error(kind: TimesheetError["kind"], message = "boom"): TimesheetError {
-  return { kind, message };
-}
-
 const from = day("2026-09-09");
+const en = copyFor("en");
+const unreachable: TimesheetError = "unreachable";
+const sessionRejected: TimesheetError = "sessionRejected";
+const requestRejected: TimesheetError = "requestRejected";
+const entryNotDeletable: TimesheetError = "entryNotDeletable";
+const entryNotUpdatable: TimesheetError = "entryNotUpdatable";
 
 QUnit.module("noticeFromWrite");
 
@@ -30,28 +33,28 @@ QUnit.test("create fail any kind is a no-op", (assert) => {
   assert.strictEqual(
     noticeFromWrite({
       op: "createEntry",
-      result: { ok: false, error: error("network") },
+      result: { ok: false, error: unreachable },
     }),
     undefined,
   );
   assert.strictEqual(
     noticeFromWrite({
       op: "createEntry",
-      result: { ok: false, error: error("invalid") },
+      result: { ok: false, error: requestRejected },
     }),
     undefined,
   );
   assert.strictEqual(
     noticeFromWrite({
       op: "createEntry",
-      result: { ok: false, error: error("rejected") },
+      result: { ok: false, error: entryNotDeletable },
     }),
     undefined,
   );
   assert.strictEqual(
     noticeFromWrite({
       op: "createEntry",
-      result: { ok: false, error: error("unauthorized") },
+      result: { ok: false, error: sessionRejected },
     }),
     undefined,
   );
@@ -104,9 +107,9 @@ QUnit.test("copy fail maps to copyDayFailed", (assert) => {
   assert.deepEqual(
     noticeFromWrite({
       op: "copyDay",
-      result: { ok: false, error: error("network") },
+      result: { ok: false, error: unreachable },
     }),
-    { kind: "copyDayFailed", message: "boom" },
+    { kind: "copyDayFailed", error: unreachable },
   );
 });
 
@@ -114,7 +117,7 @@ QUnit.test("copy fail unauthorized is a no-op", (assert) => {
   assert.strictEqual(
     noticeFromWrite({
       op: "copyDay",
-      result: { ok: false, error: error("unauthorized") },
+      result: { ok: false, error: sessionRejected },
     }),
     undefined,
   );
@@ -131,14 +134,11 @@ QUnit.test("timer fail network maps to timerFailed", (assert) => {
   assert.deepEqual(
     noticeFromWrite({
       op: "timer",
-      result: {
-        ok: false,
-        error: error("network", "Could not reach Productive."),
-      },
+      result: { ok: false, error: unreachable },
     }),
     {
       kind: "timerFailed",
-      message: "Could not reach Productive.",
+      error: unreachable,
     },
   );
 });
@@ -147,7 +147,7 @@ QUnit.test("timer fail unauthorized is a no-op", (assert) => {
   assert.strictEqual(
     noticeFromWrite({
       op: "timer",
-      result: { ok: false, error: error("unauthorized") },
+      result: { ok: false, error: sessionRejected },
     }),
     undefined,
   );
@@ -164,14 +164,11 @@ QUnit.test("recoverTimer fail network maps to recoverTimerFailed", (assert) => {
   assert.deepEqual(
     noticeFromWrite({
       op: "recoverTimer",
-      result: {
-        ok: false,
-        error: error("network", "Could not reach Productive."),
-      },
+      result: { ok: false, error: unreachable },
     }),
     {
       kind: "recoverTimerFailed",
-      message: "Could not reach Productive.",
+      error: unreachable,
     },
   );
 });
@@ -180,7 +177,7 @@ QUnit.test("recoverTimer fail unauthorized is a no-op", (assert) => {
   assert.strictEqual(
     noticeFromWrite({
       op: "recoverTimer",
-      result: { ok: false, error: error("unauthorized") },
+      result: { ok: false, error: sessionRejected },
     }),
     undefined,
   );
@@ -203,14 +200,11 @@ QUnit.test("delete fail network maps to entryDeleteFailed", (assert) => {
   assert.deepEqual(
     noticeFromWrite({
       op: "deleteEntry",
-      result: {
-        ok: false,
-        error: error("network", "Could not reach Productive."),
-      },
+      result: { ok: false, error: unreachable },
     }),
     {
       kind: "entryDeleteFailed",
-      message: "Could not reach Productive.",
+      error: unreachable,
     },
   );
 });
@@ -219,7 +213,7 @@ QUnit.test("delete fail unauthorized is a no-op", (assert) => {
   assert.strictEqual(
     noticeFromWrite({
       op: "deleteEntry",
-      result: { ok: false, error: error("unauthorized") },
+      result: { ok: false, error: sessionRejected },
     }),
     undefined,
   );
@@ -236,14 +230,11 @@ QUnit.test("update fail network maps to entryUpdateFailed", (assert) => {
   assert.deepEqual(
     noticeFromWrite({
       op: "updateEntry",
-      result: {
-        ok: false,
-        error: error("network", "Could not reach Productive."),
-      },
+      result: { ok: false, error: unreachable },
     }),
     {
       kind: "entryUpdateFailed",
-      message: "Could not reach Productive.",
+      error: unreachable,
     },
   );
 });
@@ -252,7 +243,7 @@ QUnit.test("update fail unauthorized is a no-op", (assert) => {
   assert.strictEqual(
     noticeFromWrite({
       op: "updateEntry",
-      result: { ok: false, error: error("unauthorized") },
+      result: { ok: false, error: sessionRejected },
     }),
     undefined,
   );
@@ -261,36 +252,33 @@ QUnit.test("update fail unauthorized is a no-op", (assert) => {
 QUnit.module("copyForNotice");
 
 QUnit.test("entryCreated title is Time entry added", (assert) => {
-  assert.deepEqual(copyForNotice({ kind: "entryCreated" }), {
+  assert.deepEqual(copyForNotice({ kind: "entryCreated" }, en), {
     level: "title",
     title: "Time entry added",
   });
 });
 
 QUnit.test("dayCopied title names the source day", (assert) => {
-  assert.deepEqual(copyForNotice({ kind: "dayCopied", from, created: 2 }), {
+  assert.deepEqual(copyForNotice({ kind: "dayCopied", from, created: 2 }, en), {
     level: "title",
-    title: `Copied entries from ${formatCalendarDayLabel(from)}`,
+    title: en.notice.dayCopied(from),
   });
 });
 
 QUnit.test("dayCopiedPartial uses the warning copy", (assert) => {
   assert.deepEqual(
-    copyForNotice({ kind: "dayCopiedPartial", from, created: 1 }),
+    copyForNotice({ kind: "dayCopiedPartial", from, created: 1 }, en),
     {
       level: "detail",
-      title: `Copied some entries from ${formatCalendarDayLabel(from)}`,
+      title: en.notice.dayCopiedPartial(from),
       description: "Productive rejected the rest.",
     },
   );
 });
 
-QUnit.test("timerFailed uses the error message", (assert) => {
+QUnit.test("timerFailed uses the failure catalog", (assert) => {
   assert.deepEqual(
-    copyForNotice({
-      kind: "timerFailed",
-      message: "Could not reach Productive.",
-    }),
+    copyForNotice({ kind: "timerFailed", error: unreachable }, en),
     {
       level: "detail",
       title: "Couldn't update the timer",
@@ -299,12 +287,9 @@ QUnit.test("timerFailed uses the error message", (assert) => {
   );
 });
 
-QUnit.test("recoverTimerFailed uses the error message", (assert) => {
+QUnit.test("recoverTimerFailed uses the failure catalog", (assert) => {
   assert.deepEqual(
-    copyForNotice({
-      kind: "recoverTimerFailed",
-      message: "Could not reach Productive.",
-    }),
+    copyForNotice({ kind: "recoverTimerFailed", error: unreachable }, en),
     {
       level: "detail",
       title: "Couldn't refresh the timer",
@@ -313,12 +298,9 @@ QUnit.test("recoverTimerFailed uses the error message", (assert) => {
   );
 });
 
-QUnit.test("copyDayFailed uses the error message", (assert) => {
+QUnit.test("copyDayFailed uses the failure catalog", (assert) => {
   assert.deepEqual(
-    copyForNotice({
-      kind: "copyDayFailed",
-      message: "Could not reach Productive.",
-    }),
+    copyForNotice({ kind: "copyDayFailed", error: unreachable }, en),
     {
       level: "detail",
       title: "Couldn't copy the previous day",
@@ -328,25 +310,22 @@ QUnit.test("copyDayFailed uses the error message", (assert) => {
 });
 
 QUnit.test("sessionExpired title is the fixed session copy", (assert) => {
-  assert.deepEqual(copyForNotice({ kind: "sessionExpired" }), {
+  assert.deepEqual(copyForNotice({ kind: "sessionExpired" }, en), {
     level: "title",
     title: "Your session expired. Log in again.",
   });
 });
 
 QUnit.test("entryDeleted title is Time entry deleted", (assert) => {
-  assert.deepEqual(copyForNotice({ kind: "entryDeleted" }), {
+  assert.deepEqual(copyForNotice({ kind: "entryDeleted" }, en), {
     level: "title",
     title: "Time entry deleted",
   });
 });
 
-QUnit.test("entryDeleteFailed uses the error message", (assert) => {
+QUnit.test("entryDeleteFailed uses the failure catalog", (assert) => {
   assert.deepEqual(
-    copyForNotice({
-      kind: "entryDeleteFailed",
-      message: "Could not reach Productive.",
-    }),
+    copyForNotice({ kind: "entryDeleteFailed", error: unreachable }, en),
     {
       level: "detail",
       title: "Couldn't delete the time entry",
@@ -356,18 +335,15 @@ QUnit.test("entryDeleteFailed uses the error message", (assert) => {
 });
 
 QUnit.test("entryUpdated title is Time entry updated", (assert) => {
-  assert.deepEqual(copyForNotice({ kind: "entryUpdated" }), {
+  assert.deepEqual(copyForNotice({ kind: "entryUpdated" }, en), {
     level: "title",
     title: "Time entry updated",
   });
 });
 
-QUnit.test("entryUpdateFailed uses the error message", (assert) => {
+QUnit.test("entryUpdateFailed uses the failure catalog", (assert) => {
   assert.deepEqual(
-    copyForNotice({
-      kind: "entryUpdateFailed",
-      message: "This time entry can't be updated.",
-    }),
+    copyForNotice({ kind: "entryUpdateFailed", error: entryNotUpdatable }, en),
     {
       level: "detail",
       title: "Couldn't update the time entry",

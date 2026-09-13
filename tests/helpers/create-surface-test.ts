@@ -15,7 +15,7 @@ const CLOSED: CreateRequest = { kind: "closed" };
 const OPEN: CreateRequest = { kind: "open" };
 const EDITING: CreateStatus = { kind: "editing" };
 const SAVING: CreateStatus = { kind: "saving" };
-const FAILED: CreateStatus = { kind: "failed", message: "nope" };
+const FAILED: CreateStatus = { kind: "failed", error: "unreachable" };
 
 function mountsForm(surface: CreateSurface): boolean {
   switch (surface.kind) {
@@ -115,6 +115,6 @@ QUnit.test("entryFormStatus is literal per status", (assert) => {
   });
   assert.deepEqual(entryFormStatus(FAILED), {
     submitting: false,
-    error: "nope",
+    error: "unreachable",
   });
 });

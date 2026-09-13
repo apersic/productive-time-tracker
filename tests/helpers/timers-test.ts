@@ -102,10 +102,7 @@ QUnit.module("stopTimer", (hooks) => {
     });
     assert.deepEqual(result, {
       ok: false,
-      error: {
-        kind: "rejected",
-        message: "This timer was already stopped.",
-      },
+      error: "timerAlreadyStopped",
     });
   });
 });

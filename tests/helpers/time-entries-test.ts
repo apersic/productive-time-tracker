@@ -184,10 +184,7 @@ QUnit.module("updateTimeEntry", (hooks) => {
     });
     assert.deepEqual(result, {
       ok: false,
-      error: {
-        kind: "rejected",
-        message: "This time entry can't be updated.",
-      },
+      error: "entryNotUpdatable",
     });
     assert.ok(
       capturedUrl?.includes("include=service,task,service.deal.project"),
@@ -205,10 +202,7 @@ QUnit.module("updateTimeEntry", (hooks) => {
     });
     assert.deepEqual(result, {
       ok: false,
-      error: {
-        kind: "rejected",
-        message: "This time entry no longer exists.",
-      },
+      error: "entryGone",
     });
   });
 });

@@ -1,21 +1,24 @@
 import QUnit from "qunit";
+import { copyFor } from "../../src/lib/copy";
 import { contentSecurityPolicy } from "../../src/lib/document/csp.ts";
 import { documentTitle, pageHeading } from "../../src/lib/document/page.ts";
 import { robotsTxt, shellHead } from "../../src/lib/document/shell.ts";
 
+const en = copyFor("en");
+
 QUnit.module("document");
 
 QUnit.test("pageHeading literals", (assert) => {
-  assert.equal(pageHeading("login"), "Log in");
-  assert.equal(pageHeading("home"), "Home");
-  assert.equal(pageHeading("editEntry"), "Edit time entry");
+  assert.equal(pageHeading("login", en), "Log in");
+  assert.equal(pageHeading("home", en), "Home");
+  assert.equal(pageHeading("editEntry", en), "Edit time entry");
 });
 
 QUnit.test("documentTitle literals", (assert) => {
-  assert.equal(documentTitle("login"), "Log in · Productive Time Tracker");
-  assert.equal(documentTitle("home"), "Home · Productive Time Tracker");
+  assert.equal(documentTitle("login", en), "Log in · Productive Time Tracker");
+  assert.equal(documentTitle("home", en), "Home · Productive Time Tracker");
   assert.equal(
-    documentTitle("editEntry"),
+    documentTitle("editEntry", en),
     "Edit time entry · Productive Time Tracker",
   );
 });
