@@ -16,6 +16,7 @@ export function durationFieldIssue(
 ): FieldIssue | undefined {
   switch (draft.kind) {
     case "empty":
+      return undefined;
     case "invalid":
       return "blank";
     case "tooLong":

@@ -171,7 +171,7 @@ function AuthenticatedHome(props: {
           flex="1"
           minH="0"
         >
-          <Box hideBelow={HOME_CREATE_SPLIT} minH="0" overflow="hidden">
+          <Box hideBelow={HOME_CREATE_SPLIT} minH="0" overflowY="auto">
             <CreateEntrySurface
               picker={picker}
               blocked={timesheet.entries.status === "loading"}

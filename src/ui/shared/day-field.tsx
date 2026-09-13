@@ -1,4 +1,5 @@
-import { Flex, IconButton } from "@chakra-ui/react";
+import { Flex, IconButton, Tooltip } from "@chakra-ui/react";
+import type { ReactNode } from "react";
 import { useCopy } from "../../lib/copy";
 import {
   nextCalendarDay,
@@ -8,6 +9,35 @@ import {
 } from "../../lib/time/calendar-day.ts";
 import { ChevronIcon } from "../../lib/icons";
 import { CalendarDayPicker } from "./calendar-day-picker.tsx";
+
+function DayNavButton(props: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <span style={{ display: "inline-flex" }}>
+          <IconButton
+            type="button"
+            variant="ghost"
+            colorPalette="blue"
+            aria-label={props.label}
+            onClick={props.onClick}
+            disabled={props.disabled}
+          >
+            {props.children}
+          </IconButton>
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Positioner>
+        <Tooltip.Content>{props.label}</Tooltip.Content>
+      </Tooltip.Positioner>
+    </Tooltip.Root>
+  );
+}
 
 export function DayField(props: {
   value: CalendarDay;
@@ -19,11 +49,8 @@ export function DayField(props: {
   return (
     <Flex gap="2" align="center" wrap="wrap">
       <Flex gap="1">
-        <IconButton
-          type="button"
-          variant="ghost"
-          colorPalette="blue"
-          aria-label={copy.form.previousDay}
+        <DayNavButton
+          label={copy.form.previousDay}
           onClick={() => {
             props.onChange(previousCalendarDay(props.value));
           }}
@@ -31,12 +58,9 @@ export function DayField(props: {
           <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}>
             <ChevronIcon />
           </span>
-        </IconButton>
-        <IconButton
-          type="button"
-          variant="ghost"
-          colorPalette="blue"
-          aria-label={copy.form.today}
+        </DayNavButton>
+        <DayNavButton
+          label={copy.form.today}
           onClick={() => {
             props.onChange(today);
           }}
@@ -51,18 +75,15 @@ export function DayField(props: {
               background: "currentColor",
             }}
           />
-        </IconButton>
-        <IconButton
-          type="button"
-          variant="ghost"
-          colorPalette="blue"
-          aria-label={copy.form.nextDay}
+        </DayNavButton>
+        <DayNavButton
+          label={copy.form.nextDay}
           onClick={() => {
             props.onChange(nextCalendarDay(props.value));
           }}
         >
           <ChevronIcon />
-        </IconButton>
+        </DayNavButton>
       </Flex>
       <CalendarDayPicker
         value={props.value}
