@@ -255,10 +255,12 @@ export function EntryForm(props: {
     setDurationIssue(issue);
     switch (draft.kind) {
       case "empty":
-      case "invalid":
         setDuration("");
         setSpoken(emptySpokenDuration);
-        return { value: "", draft: { kind: "empty" } };
+        return { value: "", draft };
+      case "invalid":
+        setSpoken(emptySpokenDuration);
+        return { value: raw, draft };
       case "tooLong":
         setSpoken(emptySpokenDuration);
         return { value: raw, draft };
@@ -351,7 +353,6 @@ export function EntryForm(props: {
             />
           ) : null}
           <Field.Root
-            required
             invalid={durationIssue !== undefined}
             disabled={disabled}
             width="full"

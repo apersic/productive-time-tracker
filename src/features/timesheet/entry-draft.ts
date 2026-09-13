@@ -2,6 +2,8 @@ import { durationFieldIssue, type FieldIssue } from "../../lib/forms";
 import {
   formatHhMm,
   parseDurationDraft,
+  parseMinutes,
+  type DurationDraft,
   type Minutes,
 } from "../../lib/time/duration.ts";
 import type { TimeEntry } from "./timesheet-model.ts";
@@ -23,6 +25,22 @@ export type EntryDraft = {
 export type EntryDraftResult =
   | { ok: true; draft: EntryDraft }
   | { ok: false; issues: { duration?: FieldIssue; service?: FieldIssue } };
+
+function loggedFromDraft(draft: DurationDraft): Minutes | undefined {
+  switch (draft.kind) {
+    case "empty":
+      return parseMinutes(0);
+    case "ready":
+      return draft.minutes;
+    case "invalid":
+    case "tooLong":
+      return undefined;
+    default: {
+      const _exhaustive: never = draft;
+      return _exhaustive;
+    }
+  }
+}
 
 export function blankEntryFields(): EntryFields {
   return {
@@ -68,12 +86,9 @@ export function parseEntryDraft(args: {
 }): EntryDraftResult {
   const durationDraft = parseDurationDraft(args.fields.duration);
   const durationIssue = durationFieldIssue(durationDraft);
+  const logged = loggedFromDraft(durationDraft);
   const service = resolvedService(args);
-  if (
-    durationDraft.kind !== "ready" ||
-    durationIssue !== undefined ||
-    !service
-  ) {
+  if (durationIssue !== undefined || logged === undefined || !service) {
     return {
       ok: false,
       issues: {
@@ -86,7 +101,7 @@ export function parseEntryDraft(args: {
     ok: true,
     draft: {
       note: args.fields.note,
-      logged: durationDraft.minutes,
+      logged,
       service,
     },
   };
