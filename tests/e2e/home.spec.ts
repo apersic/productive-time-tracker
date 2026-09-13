@@ -26,7 +26,10 @@ import {
 } from "./productive-mock";
 
 async function storedCredentials(page: Page) {
-  return page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY);
+  return page.evaluate(
+    (key) => window.sessionStorage.getItem(key),
+    STORAGE_KEY,
+  );
 }
 
 function sameMonthNeighbor(day: CalendarDay): CalendarDay {

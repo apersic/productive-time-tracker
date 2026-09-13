@@ -45,7 +45,10 @@ async function pickCalendarDay(page: Page, name: string | RegExp) {
 }
 
 async function storedCredentials(page: Page) {
-  return page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY);
+  return page.evaluate(
+    (key) => window.sessionStorage.getItem(key),
+    STORAGE_KEY,
+  );
 }
 
 const task = { id: "task-1", title: "Ship edit" };

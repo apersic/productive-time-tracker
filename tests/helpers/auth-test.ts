@@ -52,7 +52,7 @@ QUnit.module("credentials storage io", (hooks) => {
     setItemImpl = (key, value) => {
       store.set(key, value);
     };
-    const localStorage = {
+    const sessionStorage = {
       getItem(key: string) {
         return store.get(key) ?? null;
       },
@@ -64,7 +64,7 @@ QUnit.module("credentials storage io", (hooks) => {
       },
     };
     Object.defineProperty(globalThis, "window", {
-      value: { localStorage },
+      value: { sessionStorage },
       configurable: true,
       writable: true,
     });
