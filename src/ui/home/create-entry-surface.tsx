@@ -16,7 +16,7 @@ import {
 } from "../../features/timesheet";
 import { usePrefersReducedMotion } from "../../lib/hooks";
 import { PlusIcon, XIcon } from "../../lib/icons";
-import { EntryForm } from "../shared";
+import { EntryForm, type EntryDayControl } from "../shared";
 import {
   createSurface,
   dismissable,
@@ -41,6 +41,7 @@ function useCreateLayout(): CreateLayout {
 export function CreateEntrySurface(props: {
   picker: ServicePicker;
   blocked: boolean;
+  day: EntryDayControl;
   onCreate: (draft: EntryDraft) => Promise<CreateResult>;
 }) {
   const layout = useCreateLayout();
@@ -92,6 +93,7 @@ export function CreateEntrySurface(props: {
           status={surface.status}
           picker={props.picker}
           blocked={props.blocked}
+          day={props.day}
           onSubmit={submit}
           heading="New time entry"
         />
@@ -106,6 +108,7 @@ export function CreateEntrySurface(props: {
           status={surface.status}
           picker={props.picker}
           blocked={props.blocked}
+          day={props.day}
           onClose={close}
           onSubmit={submit}
         />
@@ -121,6 +124,7 @@ function CreateEntryForm(props: {
   status: CreateStatus;
   picker: ServicePicker;
   blocked: boolean;
+  day: EntryDayControl;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
   heading?: string;
 }) {
@@ -134,6 +138,7 @@ function CreateEntryForm(props: {
       ) : null}
       <EntryForm
         initial={blankEntryFields()}
+        day={props.day}
         submitLabel="Add entry"
         picker={props.picker}
         submitting={submitting}
@@ -173,6 +178,7 @@ function CreateEntryDialog(props: {
   status: CreateStatus;
   picker: ServicePicker;
   blocked: boolean;
+  day: EntryDayControl;
   onClose: () => void;
   onSubmit: (draft: EntryDraft) => Promise<boolean>;
 }) {
@@ -222,6 +228,7 @@ function CreateEntryDialog(props: {
                 status={props.status}
                 picker={props.picker}
                 blocked={props.blocked}
+                day={props.day}
                 onSubmit={props.onSubmit}
               />
             </Dialog.Body>

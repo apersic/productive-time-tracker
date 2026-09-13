@@ -4,7 +4,7 @@ This specification records the frontend shape, the UI the product needs, how the
 
 ## Frontend architecture
 
-The app is a Vite 8 single-page app with React 19, TypeScript, and Chakra UI. There is no Next.js server and no API route in this repo. `index.html` mounts `src/main.tsx`. That file wraps Chakra, React Router, and `AuthProvider`, then renders `App`.
+The app is a Vite 8 single-page app with React 19, TypeScript, and Chakra UI. `index.html` mounts `src/main.tsx`. That file wraps Chakra, React Router, and `AuthProvider`, then renders `App`.
 
 Routes:
 
@@ -35,8 +35,8 @@ Chakra UI owns the visible controls. A skip link is the first focusable control 
 
 - **Login form.** Organization ID and API token. Submit authenticates against Productive. Failure shows an error. Success stores credentials and opens home.
 - **Home.** The person name is a menu that contains **Log out**. A day control defaults to today in the browser timezone. Wide layouts show the create form beside the list. Narrow layouts hide that form behind a **New time entry** button that opens a full-screen dialog.
-- **Entry list.** Rows for the selected day. Each row shows duration, service name, optional project, optional task title, and the note. Play and stop drive Productive timers. More actions offer edit and delete. An empty day can copy tasks from the previous day. Further pages load by scrolling `links.next`.
-- **Entry form.** Duration, a service picker, and a ProseMirror note. No person field. Create has no date field. Home's day control is the date for creates. Edit has a Date field first.
+- **Entry list.** Rows for the selected day. Each row shows duration, service name, optional project, optional task title, the note, and the entry's date in muted type at the bottom right. Play and stop drive Productive timers. More actions offer edit and delete. An empty day can copy tasks from the previous day. Further pages load by scrolling `links.next`.
+- **Entry form.** Date, duration, a service picker, and a ProseMirror note. No person field. Date is full width on create and edit. Create Date is the same value as home's day control. Changing either moves the listing day. Edit has Date first.
 - **Service picker.** A combobox that expands into company, project, deal, and section groups. Search calls Productive with `filter[query]`. One trackable service is selected automatically. A service that is already on an entry stays visible even when it is no longer bookable that day.
 - **Delete action.** A confirm step before `DELETE`.
 - **Edit.** `/edit/:entryId` reuses the same form. Save `PATCH`es duration, note, service, and date. Unsaved navigation warns in the browser.
@@ -59,7 +59,7 @@ Login:
 Time entries:
 
 - List the day with `GET /time_entries` filtered to the current person, drafts included, and that calendar date. Include `service,task,service.deal.project`. Follow `links.next`.
-- Create with `POST /time_entries`. `person_id` is the authenticated person. Duration is `time` in minutes. Day is `date`. Description is `note` HTML. `service_id` is required.
+- Create with `POST /time_entries`. `person_id` is the authenticated person. Duration is `time` in minutes. Day is `date` from the form Date field. Description is `note` HTML. `service_id` is required.
 - Edit with `PATCH /time_entries/{id}` for `time`, `note`, `service`, and `date`. The date comes from the form Date field.
 - Delete with `DELETE /time_entries/{id}`.
 
@@ -90,7 +90,7 @@ Timers use Productive's timer resources to start, stop, and recover a running ti
 
 ## Assumptions
 
-1. **The given day is user-selected.** The date control defaults to today and can move. Create uses the selected listing day. Edit can move the entry to another day.
+1. **The given day is user-selected.** The date control defaults to today and can move. Create's Date field is the selected listing day. Edit can move the entry to another day.
 2. **Description is `note`.** Productive has no separate description field on a time entry. The editor stores HTML.
 3. **Duration is minutes on the wire.** The form can show hours and minutes. Storage and API use `time`.
 4. **A service is required to create.** Productive requires `service_id` on `POST /time_entries`. The picker loads bookable services for the selected day.

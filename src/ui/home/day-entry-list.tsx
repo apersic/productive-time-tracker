@@ -68,16 +68,19 @@ export function DayEntryListSkeleton(): ReactElement {
 function EntryRowSkeleton(): ReactElement {
   return (
     <Card aria-hidden>
-      <Flex align="flex-start" justify="space-between" gap="4">
-        <Stack flex="1" gap="1" minW="0">
-          <SkeletonText noOfLines={1} />
-          <SkeletonText noOfLines={1} width="50%" />
-        </Stack>
-        <Flex align="center" justify="space-between" gap="4">
-          <Skeleton height="5" width="12" />
-          <SkeletonCircle size="8" />
-          <SkeletonCircle size="8" />
+      <Flex direction="column" gap="2">
+        <Flex align="flex-start" justify="space-between" gap="4">
+          <Stack flex="1" gap="1" minW="0">
+            <SkeletonText noOfLines={1} />
+            <SkeletonText noOfLines={1} width="50%" />
+          </Stack>
+          <Flex align="center" justify="space-between" gap="4">
+            <Skeleton height="5" width="12" />
+            <SkeletonCircle size="8" />
+            <SkeletonCircle size="8" />
+          </Flex>
         </Flex>
+        <Skeleton height="4" width="24" alignSelf="flex-end" />
       </Flex>
     </Card>
   );
@@ -304,41 +307,48 @@ function EntryRow(props: {
 
   return (
     <Card>
-      <Flex align="flex-start" justify="space-between" gap="4">
-        <Stack flex="1" gap="3" minW="0">
-          <Stack gap="1">
-            <Heading as="h3" size="sm" lineClamp={2}>
-              {listing.title}
-            </Heading>
-            {listing.subtitle ? (
-              <Text color="fg.muted" textStyle="sm">
-                {listing.subtitle}
-              </Text>
-            ) : null}
+      <Flex direction="column" gap="2">
+        <Flex align="flex-start" justify="space-between" gap="4">
+          <Stack flex="1" gap="3" minW="0">
+            <Stack gap="1">
+              <Heading as="h3" size="sm" lineClamp={2}>
+                {listing.title}
+              </Heading>
+              {listing.subtitle ? (
+                <Text color="fg.muted" textStyle="sm">
+                  {listing.subtitle}
+                </Text>
+              ) : null}
+            </Stack>
+            {entryNoteView(props.entry.note)}
           </Stack>
-          {entryNoteView(props.entry.note)}
-        </Stack>
-        <Flex align="center" justify="space-between" gap="4">
-          <Text fontFamily="mono" whiteSpace="nowrap">
-            {formatHhMm(shown)}
-          </Text>
-          <TimerButton
-            title={listing.title}
-            control={timerControl({
-              entryId: props.entry.id,
-              timer: props.timesheet.timer,
-            })}
-            onPlay={() => props.onPlay(props.entry.id)}
-            onPause={props.onPause}
-          />
-          <EntryMoreMenu
-            entry={props.entry}
-            title={listing.title}
-            timesheet={props.timesheet}
-            onEdit={props.onEdit}
-            onDelete={props.onDelete}
-          />
+          <Flex align="center" justify="space-between" gap="4">
+            <Text fontFamily="mono" whiteSpace="nowrap">
+              {formatHhMm(shown)}
+            </Text>
+            <TimerButton
+              title={listing.title}
+              control={timerControl({
+                entryId: props.entry.id,
+                timer: props.timesheet.timer,
+              })}
+              onPlay={() => props.onPlay(props.entry.id)}
+              onPause={props.onPause}
+            />
+            <EntryMoreMenu
+              entry={props.entry}
+              title={listing.title}
+              timesheet={props.timesheet}
+              onEdit={props.onEdit}
+              onDelete={props.onDelete}
+            />
+          </Flex>
         </Flex>
+        <Text asChild color="fg.muted" textStyle="sm" alignSelf="flex-end">
+          <time dateTime={props.entry.day}>
+            {formatCalendarDayLabel(props.entry.day)}
+          </time>
+        </Text>
       </Flex>
     </Card>
   );
@@ -474,7 +484,7 @@ function ReadyList(props: {
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 96,
+    estimateSize: () => 120,
     overscan: 8,
     getItemKey: (index) => rows[index]?.id ?? index,
   });
