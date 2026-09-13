@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
   gate,
   jsonApiAttribute,
@@ -8,6 +8,7 @@ import {
   jsonApiTask,
   jsonApiTimeEntry,
   localYmd,
+  browserCalendarDayLabel,
   mockProductiveIdentity,
   mockServices,
   mockTimers,
@@ -18,6 +19,30 @@ import {
   STORAGE_KEY,
   updatedEntryResponse,
 } from "./productive-mock";
+
+async function expectDateFieldIsFullWidth(form: Locator) {
+  const date = form.getByRole("textbox", { name: "Date" });
+  await expect(date).toBeVisible();
+  const formWidth = await form.evaluate(
+    (el) => el.getBoundingClientRect().width,
+  );
+  const dateControlWidth = await date.evaluate((el) => {
+    const control = el.closest("[data-part='control']");
+    return (control ?? el).getBoundingClientRect().width;
+  });
+  expect(dateControlWidth).toBeGreaterThan(formWidth * 0.85);
+  expect(formWidth - dateControlWidth).toBeLessThan(48);
+}
+
+async function openFormCalendar(form: Locator) {
+  await form.getByRole("button", { name: "Open calendar" }).click();
+}
+
+async function pickCalendarDay(page: Page, name: string | RegExp) {
+  const calendar = page.getByRole("application", { name: "calendar" });
+  await expect(calendar).toBeVisible();
+  await calendar.getByRole("button", { name }).click();
+}
 
 async function storedCredentials(page: Page) {
   return page.evaluate((key) => window.localStorage.getItem(key), STORAGE_KEY);
@@ -129,17 +154,28 @@ test("cold edit loads by id and unknown ids are not found", async ({
   await expect(page.getByText("This time entry was not found.")).toBeVisible();
 });
 
-test("create form has no Date field", async ({ page }) => {
+test("create form has a Date field", async ({ page }) => {
   await mockProductiveIdentity(page);
   await mockServices(page);
   await mockTimers(page);
   await mockTimeEntries(page, () => ({ data: [] }));
   await openHome(page);
   const createForm = page.locator("form");
-  await expect(createForm.getByLabel("Date")).toHaveCount(0);
-  await expect(createForm.getByRole("textbox", { name: "Date" })).toHaveCount(
-    0,
-  );
+  await expect(createForm.getByRole("textbox", { name: "Date" })).toBeVisible();
+  await expectDateFieldIsFullWidth(createForm);
+  const dayWidth = await page
+    .getByRole("textbox", { name: "Day" })
+    .evaluate((el) => {
+      const control = el.closest("[data-part='control']");
+      return (control ?? el).getBoundingClientRect().width;
+    });
+  const dateWidth = await createForm
+    .getByRole("textbox", { name: "Date" })
+    .evaluate((el) => {
+      const control = el.closest("[data-part='control']");
+      return (control ?? el).getBoundingClientRect().width;
+    });
+  expect(dayWidth).toBeLessThan(dateWidth);
 });
 
 test("saving a moved date patches that day and returns home", async ({
@@ -164,13 +200,16 @@ test("saving a moved date patches that day and returns home", async ({
   await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
+  await expect(
+    page.getByRole("button", { name: "Save changes" }),
+  ).toBeEnabled();
   const firstLabel = page.locator("form label").first();
   await expect(firstLabel).toHaveText("Date");
-  await page.getByRole("button", { name: "Open calendar" }).click();
-  await expect(
-    page.getByRole("application", { name: "calendar" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: /March 15, 2026/ }).click();
+  await openFormCalendar(page.locator("form"));
+  await pickCalendarDay(
+    page,
+    await browserCalendarDayLabel(page, "2026-03-15"),
+  );
   await expect(
     page.getByRole("button", { name: "Save changes" }),
   ).toBeEnabled();
@@ -207,16 +246,25 @@ test("changing service then date keeps the picked service", async ({
   await page.getByRole("button", { name: /More actions for/ }).click();
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
-  await page.getByRole("combobox", { name: "Service" }).click();
+  await expect(
+    page.getByRole("button", { name: "Save changes" }),
+  ).toBeEnabled();
+  const service = page.getByRole("combobox", { name: "Service" });
+  await expect(service).toBeEnabled();
+  await service.click();
   await page.getByRole("option", { name: "Design" }).click();
   await expect(page.getByRole("combobox", { name: "Service" })).toHaveText(
     "Design",
   );
-  await page.getByRole("button", { name: "Open calendar" }).click();
+  const movedDay = await browserCalendarDayLabel(page, "2026-03-15");
+  await openFormCalendar(page.locator("form"));
+  await pickCalendarDay(page, movedDay);
+  await expect(page.getByRole("textbox", { name: "Date" })).toHaveValue(
+    movedDay,
+  );
   await expect(
-    page.getByRole("application", { name: "calendar" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: /March 15, 2026/ }).click();
+    page.getByRole("button", { name: "Save changes" }),
+  ).toBeEnabled();
   await expect(page.getByRole("combobox", { name: "Service" })).toHaveText(
     "Design",
   );
@@ -236,13 +284,13 @@ test("changing only the date asks before discarding", async ({ page }) => {
   await page.getByRole("menuitem", { name: "Edit" }).click();
   await expect(page).toHaveURL(/\/edit\/entry-1/);
   await expect(page.getByRole("textbox", { name: "Date" })).toHaveValue(
-    "March 10, 2026",
+    await browserCalendarDayLabel(page, "2026-03-10"),
   );
-  await page.getByRole("button", { name: "Open calendar" }).click();
-  await expect(
-    page.getByRole("application", { name: "calendar" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: /March 15, 2026/ }).click();
+  await openFormCalendar(page.locator("form"));
+  await pickCalendarDay(
+    page,
+    await browserCalendarDayLabel(page, "2026-03-15"),
+  );
   await page.getByRole("link", { name: "Back to home" }).click();
   await expect(
     page.getByRole("alertdialog", { name: "Discard unsaved changes?" }),

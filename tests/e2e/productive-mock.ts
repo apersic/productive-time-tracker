@@ -46,6 +46,19 @@ export function localYmd(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+export async function browserCalendarDayLabel(page: Page, day: string) {
+  return page.evaluate((iso) => {
+    const year = Number(iso.slice(0, 4));
+    const month = Number(iso.slice(5, 7));
+    const date = Number(iso.slice(8, 10));
+    return new Date(year, month - 1, date).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }, day);
+}
+
 export function jsonApiTimeEntry(
   id = "entry-1",
   extras?: {

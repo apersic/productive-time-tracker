@@ -162,7 +162,6 @@ export function LoginPage() {
                   autoComplete="username"
                   spellCheck={false}
                   placeholder="12345…"
-                  _placeholder={{ color: "fg.subtle" }}
                 />
               </InputGroup>
               {organizationIssue ? (
@@ -207,7 +206,6 @@ export function LoginPage() {
                   autoComplete="current-password"
                   spellCheck={false}
                   placeholder="Paste your token…"
-                  _placeholder={{ color: "fg.subtle" }}
                 />
               </InputGroup>
               {tokenIssue ? (

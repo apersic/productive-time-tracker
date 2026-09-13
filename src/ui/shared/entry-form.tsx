@@ -59,6 +59,10 @@ export function EntryFormSkeleton(): ReactElement {
     <Card aria-hidden>
       <Stack gap="4">
         <Field.Root>
+          <Field.Label>Date</Field.Label>
+          <Skeleton height="10" borderRadius="md" />
+        </Field.Root>
+        <Field.Root>
           <Field.Label>Duration</Field.Label>
           <Skeleton height="10" borderRadius="md" />
         </Field.Root>
@@ -144,7 +148,7 @@ function loadingStatus(args: {
 
 export function EntryForm(props: {
   initial: EntryFields;
-  day?: EntryDayControl;
+  day: EntryDayControl;
   submitLabel: string;
   picker: ServicePicker;
   submitting: boolean;
@@ -323,18 +327,17 @@ export function EntryForm(props: {
               {availability.error.message}
             </Text>
           ) : null}
-          {props.day ? (
-            // Changing day refetches services. formDisabled is true while that
-            // loads, so this row keys off submitting only.
-            <Field.Root disabled={props.submitting} width="full">
-              <CalendarDayPicker
-                label="Date"
-                value={props.day.value}
-                onChange={props.day.select}
-                disabled={props.submitting}
-              />
-            </Field.Root>
-          ) : null}
+          {/* Changing day refetches services. formDisabled is true while that
+              loads, so this row keys off submitting only. */}
+          <Field.Root disabled={props.submitting} width="full">
+            <CalendarDayPicker
+              label="Date"
+              value={props.day.value}
+              onChange={props.day.select}
+              disabled={props.submitting}
+              width="full"
+            />
+          </Field.Root>
           {selectVisible ? (
             <ServiceField
               picker={props.picker}

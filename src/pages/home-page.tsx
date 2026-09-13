@@ -174,6 +174,7 @@ function AuthenticatedHome(props: {
               picker={picker}
               blocked={timesheet.entries.status === "loading"}
               onCreate={addEntry}
+              day={{ value: timesheet.day, select: selectDay }}
             />
           </Box>
           <Stack
